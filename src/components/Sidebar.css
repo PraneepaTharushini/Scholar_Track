@@ -71,3 +71,8 @@
   background: rgba(255, 255, 255, 0.17);
   color: #ffffff;
 }
+
+@media (max-width: 900px) {
+  .st-sidebar { width: 100%; }
+  .st-sidebar nav { display: flex; flex-wrap: wrap; gap: 8px; }
+}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { NavLink } from 'react-router-dom';
 import './Sidebar.css';
 
 const Sidebar = () => {
@@ -6,10 +7,11 @@ const Sidebar = () => {
     <aside className="st-sidebar">
       <h1>Scholar-Track</h1>
       <nav>
-        <a className="active" href="#dashboard">Dashboard</a>
+        <NavLink to="/dashboard">Dashboard</NavLink>
         <a href="#upload">Upload Documents</a>
+        <a href="#review">Review Tasks</a>
         <a href="#tasks">Tasks</a>
-        <a href="#calendar">Calendar</a>
+        <NavLink to="/calendar">Calendar</NavLink>
         <a href="#analytics">Analytics</a>
         <a href="#settings">Settings</a>
       </nav>

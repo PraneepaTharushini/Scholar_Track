@@ -1,13 +1,11 @@
 import React from 'react';
 import './Topbar.css';
 
-const Topbar = () => {
+const Topbar = ({ title = 'Dashboard' }) => {
   return (
     <header className="st-topbar">
-      <h2>Dashboard</h2>
-      <div className="st-user">
-        <div className="st-avatar">👤</div>
-      </div>
+      <h2>{title}</h2>
+      <div className="st-avatar">👤</div>
     </header>
   );
 };

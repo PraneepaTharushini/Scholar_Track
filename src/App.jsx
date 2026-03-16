@@ -1,9 +1,16 @@
 import React from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
-import './styles.css';
+import CalendarPage from './pages/CalendarPage';
 
-const App = () => {
-  return <Dashboard />;
-};
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/calendar" element={<CalendarPage />} />
+    </Routes>
+  );
+}
 
 export default App;

@@ -39,3 +39,7 @@
 .st-content {
   margin-top: 10px;
 }
+
+@media (max-width: 900px) {
+  .st-layout { flex-direction: column; }
+}
