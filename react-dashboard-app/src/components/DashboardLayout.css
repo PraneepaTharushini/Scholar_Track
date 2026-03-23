@@ -33,13 +33,19 @@
 .st-main {
   flex: 1;
   min-width: 0;
-  padding: 8px;
+  padding: 8px 10px;
 }
 
 .st-content {
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 @media (max-width: 900px) {
-  .st-layout { flex-direction: column; }
+  .st-layout {
+    flex-direction: column;
+  }
+
+  .st-main {
+    padding: 8px;
+  }
 }

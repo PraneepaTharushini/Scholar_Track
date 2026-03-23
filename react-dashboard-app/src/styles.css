@@ -1,7 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+:root {
+  --bg: #dfe1e6;
+  --panel: #f3f4f6;
+  --text: #1f2937;
+  --muted: #6b7280;
 }
 
 html,
@@ -11,12 +20,14 @@ body,
   padding: 0;
   width: 100%;
   min-height: 100%;
-  font-family: Inter, "Segoe UI", Arial, sans-serif;
 }
 
 body {
-  background: #dfe1e6;
-  color: #1f2937;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .container {
