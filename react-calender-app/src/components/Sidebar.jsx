@@ -11,7 +11,7 @@ const items = [
 export default function Sidebar() {
   return (
     <aside className="rc-sidebar">
-      <h1>Scholar-Track</h1>
+      <h1>Scholar Track</h1>
       <nav>
         {items.map((item) => (
           <a

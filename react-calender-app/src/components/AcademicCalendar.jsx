@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 
 const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-// Events keyed by month: YYYY-M (month is 1-12)
 const eventsByMonth = {
   '2026-3': {
     2: { text: 'SE Quiz', type: 'low' },
@@ -19,7 +18,7 @@ function getMonthLabel(date) {
 }
 
 function buildCalendarCells(year, monthIndex) {
-  const firstDayIndex = new Date(year, monthIndex, 1).getDay(); // 0-6
+  const firstDayIndex = new Date(year, monthIndex, 1).getDay();
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
 
   const leading = Array.from({ length: firstDayIndex }, (_, i) => ({
@@ -40,7 +39,6 @@ function buildCalendarCells(year, monthIndex) {
     };
   });
 
-  // Fill end-of-grid to complete week rows
   const total = leading.length + days.length;
   const trailingCount = (7 - (total % 7)) % 7;
 
@@ -53,7 +51,7 @@ function buildCalendarCells(year, monthIndex) {
 }
 
 export default function AcademicCalendar() {
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 2, 1)); // March 2026
+  const [currentDate, setCurrentDate] = useState(new Date(2026, 2, 1));
 
   const year = currentDate.getFullYear();
   const monthIndex = currentDate.getMonth();
@@ -73,11 +71,11 @@ export default function AcademicCalendar() {
     <section className="rc-calendar-wrap">
       <div className="rc-month-nav">
         <button type="button" onClick={goPrevMonth} aria-label="Previous month">
-          ◀
+          {'<'}
         </button>
         <h3>{monthLabel}</h3>
         <button type="button" onClick={goNextMonth} aria-label="Next month">
-          ▶
+          {'>'}
         </button>
       </div>
 
