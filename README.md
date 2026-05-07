@@ -1,33 +1,16 @@
-# Scholar-Track — Task Management & Task Detail Pages
+# React + Vite
 
-This is the **Tasks** section of the Scholar-Track group project, covering 2 pages:
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-1. **Task Management** (`/Tasks`) — table view with subject/priority/status filters and a View button per row
-2. **Task Details** — detail card showing subject, deadline, status, source, description, AI Analysis box, and Edit / Mark as Completed / Delete actions
+Currently, two official plugins are available:
 
-## Getting Started
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-```bash
-npm install
-npm start
-```
+## React Compiler
 
-Open [http://localhost:3000](http://localhost:3000)
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## Structure
+## Expanding the ESLint configuration
 
-```
-src/
-├── components/
-│   ├── Sidebar.jsx        # Shared navigation sidebar
-│   ├── TaskManagement.jsx # Page 1 — table with filters
-│   └── TaskDetail.jsx     # Page 2 — detail card + edit modal
-├── App.js                 # Routing between the two pages
-├── index.js
-└── index.css
-```
-
-## Notes for group integration
-
-- The other sidebar pages (Dashboard, Upload Documents, etc.) show a placeholder — those are handled by other team members.
-- `INITIAL_TASKS` is exported from `TaskManagement.jsx` so it can be replaced with a shared data source during integration.
+If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
