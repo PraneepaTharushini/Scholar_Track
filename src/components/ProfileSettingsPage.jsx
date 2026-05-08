@@ -1,58 +1,6 @@
 import { useState } from "react";
 import "../global.css";
 
-// ─── SIDEBAR ─────────────────────────────────────────────────────────────────
-const Sidebar = ({ active, setActive }) => {
-  const links = [
-    { id: "dashboard",     label: "Dashboard",        icon: "⊞" },
-    { id: "upload",        label: "Upload Documents",  icon: "⬆" },
-    { id: "review",        label: "Review Tasks",      icon: "✓" },
-    { id: "tasks",         label: "Tasks",             icon: "≡" },
-    { id: "calendar",      label: "Calendar",          icon: "📅" },
-    { id: "analytics",     label: "Analytics",         icon: "↗" },
-    { id: "notifications", label: "Notifications",     icon: "🔔" },
-    { id: "systeminfo",    label: "System Info",       icon: "ℹ" },
-    { id: "settings",      label: "Settings",          icon: "⚙" },
-  ];
-  return (
-    <div className="sidebar">
-      <div className="sidebar-logo">
-        <div className="sidebar-logo-icon">✓</div>
-        <span className="sidebar-logo-text">Scholar Track</span>
-      </div>
-      <nav className="sidebar-nav">
-        {links.map((l) => (
-          <div
-            key={l.id}
-            className={`nav-item ${active === l.id ? "active" : ""}`}
-            onClick={() => setActive(l.id)}
-          >
-            <span className="nav-icon">{l.icon}</span>
-            <span>{l.label}</span>
-          </div>
-        ))}
-      </nav>
-      <div className="sidebar-version">v1.0.0</div>
-    </div>
-  );
-};
-
-// ─── HEADER ──────────────────────────────────────────────────────────────────
-const Header = ({ title, onProfileClick }) => (
-  <div className="page-header">
-    <h1 className="page-header-title">{title}</h1>
-    <div className="header-right">
-      <button className="header-bell">🔔</button>
-      <div className="header-avatar" onClick={onProfileClick}>S</div>
-      <div>
-        <div className="header-name">Sarah</div>
-        <div className="header-role">Student</div>
-      </div>
-      <span style={{ color: "#94a3b8" }}>▾</span>
-    </div>
-  </div>
-);
-
 // ─── PROFILE PAGE ─────────────────────────────────────────────────────────────
 function ProfilePage() {
   const [form, setForm] = useState({
@@ -288,27 +236,42 @@ function SettingsPage() {
   );
 }
 
-// ─── MAIN EXPORT ──────────────────────────────────────────────────────────────
+// ─── MAIN EXPORT ─ Settings tab by default ───────────────────────────────────
 export default function ProfileSettingsPage() {
   const [activePage, setActivePage] = useState("settings");
 
-  const titles = { profile: "My Profile", settings: "Settings" };
-  const title = titles[activePage] || "Dashboard";
-
   return (
-    <div className="app-shell">
-      <Sidebar active={activePage} setActive={setActivePage} />
-      <div className="main-content">
-        <Header title={title} onProfileClick={() => setActivePage("profile")} />
-        <div className="page-body">
-          {activePage === "profile"   && <ProfilePage />}
-          {activePage === "settings"  && <SettingsPage />}
-          {activePage !== "profile" && activePage !== "settings" && (
-            <div style={{ padding: "40px 32px", color: "#94a3b8", fontSize: 15 }}>
-              ← Select a page from the sidebar
-            </div>
-          )}
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Sub-nav tabs */}
+      <div style={{
+        display: 'flex', gap: 4, padding: '16px 32px 0',
+        borderBottom: '1px solid var(--border)', background: 'var(--bg-white)'
+      }}>
+        {[["profile", "My Profile"], ["settings", "Settings"]].map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setActivePage(id)}
+            style={{
+              padding: '10px 18px',
+              background: 'none',
+              border: 'none',
+              borderBottom: activePage === id ? '2px solid var(--primary)' : '2px solid transparent',
+              color: activePage === id ? 'var(--primary)' : 'var(--text-secondary)',
+              fontWeight: activePage === id ? 700 : 500,
+              fontSize: 14,
+              cursor: 'pointer',
+              marginBottom: -1,
+              transition: 'var(--transition)',
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ overflow: 'auto', flex: 1 }}>
+        {activePage === "profile"  && <ProfilePage />}
+        {activePage === "settings" && <SettingsPage />}
       </div>
     </div>
   );
