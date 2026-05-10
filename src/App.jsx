@@ -13,6 +13,7 @@ import Notifications from './pages/Notifications';
 import SystemInfo from './pages/SystemInfo';
 import AcademicCalendar from './components/AcademicCalendar';
 import UploadPage from './pages/UploadPage';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import './App.css';
 
 /* ── Page titles mapped to routes ─────────────────────────── */
@@ -57,12 +58,13 @@ function TasksPage() {
 const AppLayout = () => {
   const location = useLocation();
   const title = PAGE_TITLES[location.pathname] || 'Scholar Track';
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <div className="app-layout">
       <Sidebar />
       <div className="app-main">
-        <Header title={title} user="Sarah" />
+        <Header title={title} user="Sarah" theme={theme} onToggleTheme={toggleTheme} />
         <main className="app-content">
           <Routes>
             <Route path="/"              element={<Dashboard />} />
@@ -82,7 +84,7 @@ const AppLayout = () => {
 };
 
 /* ── Root App ─────────────────────────────────────────────── */
-function App() {
+function AppInner() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   if (!isLoggedIn) {
@@ -93,6 +95,14 @@ function App() {
     <BrowserRouter>
       <AppLayout />
     </BrowserRouter>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppInner />
+    </ThemeProvider>
   );
 }
 

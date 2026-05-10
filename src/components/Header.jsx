@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Header.css';
 
-const Header = ({ title, user = 'Sarah' }) => {
+const Header = ({ title, user = 'Sarah', theme = 'light', onToggleTheme }) => {
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -13,6 +13,15 @@ const Header = ({ title, user = 'Sarah' }) => {
       </div>
 
       <div className="header__right">
+        {/* Dark / Light mode toggle */}
+        <button
+          className="header__theme-btn"
+          onClick={onToggleTheme}
+          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        >
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
+
         {/* Notification bell → /notifications */}
         <button
           className="header__notif-btn"

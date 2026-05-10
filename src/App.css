@@ -2,6 +2,7 @@
   display: flex;
   min-height: 100vh;
   background: var(--bg-main);
+  transition: background 0.3s ease;
 }
 
 .app-main {
@@ -11,6 +12,8 @@
   flex-direction: column;
   min-height: 100vh;
   overflow-x: hidden;
+  background: var(--bg-main);
+  transition: background 0.3s ease;
 }
 
 .app-content {
@@ -20,17 +23,17 @@
 }
 
 @media (max-width: 768px) {
-  .app-main {
-    margin-left: 0;
-  }
+  .app-main { margin-left: 0; }
 }
 
 /* ── Shared panel card ─────────────────────────────────────── */
 .panel {
-  background: #ffffff;
+  background: var(--bg-card);
   border-radius: 14px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--border);
   overflow: hidden;
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .panel-header {
@@ -38,17 +41,17 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--border);
 }
 
 .panel-title {
   font-size: 14px;
   font-weight: 700;
-  color: #1a1a3e;
+  color: var(--text-primary);
 }
 
 .btn-primary {
-  background: #6366f1;
+  background: var(--primary);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -56,9 +59,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: opacity 0.2s;
 }
 
-.btn-primary:hover {
-  background: #4f46e5;
-}
+.btn-primary:hover { opacity: 0.88; }
