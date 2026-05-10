@@ -8,11 +8,11 @@ const stats = [
 ];
 
 const recentTasks = [
-  { title: 'DBMS Project', course: 'CS3042', due: 'Today 11:59 PM', priority: 'high', progress: 80 },
-  { title: 'Algebra Midterm Prep', course: 'MAT2012', due: 'Tomorrow 2:00 PM', priority: 'high', progress: 55 },
-  { title: 'Physics Lab Report', course: 'PHY1012', due: 'May 13', priority: 'medium', progress: 30 },
-  { title: 'AI Research Paper', course: 'CS3062', due: 'May 17', priority: 'low', progress: 10 },
-  { title: 'Statistics Assignment', course: 'STA2022', due: 'May 20', priority: 'medium', progress: 0 },
+  { title: 'DBMS Project', emoji: '🗂️', course: 'CS3042', due: 'Today 11:59 PM', priority: 'high', progress: 80 },
+  { title: 'Algebra Midterm Prep', emoji: '📖', course: 'MAT2012', due: 'Tomorrow 2:00 PM', priority: 'high', progress: 55 },
+  { title: 'Physics Lab Report', emoji: '🧪', course: 'PHY1012', due: 'May 13', priority: 'medium', progress: 30 },
+  { title: 'AI Research Paper', emoji: '📄', course: 'CS3062', due: 'May 17', priority: 'low', progress: 10 },
+  { title: 'Statistics Assignment', emoji: '📝', course: 'STA2022', due: 'May 20', priority: 'medium', progress: 0 },
 ];
 
 const upcomingEvents = [
@@ -61,7 +61,10 @@ export default function Dashboard() {
                 return (
                   <div key={i} className="dash-task-row">
                     <div className="dash-task-left">
-                      <div className="dash-task-title">{t.title}</div>
+                      <div className="dash-task-header">
+                        <span className="dash-task-emoji">{t.emoji}</span>
+                        <div className="dash-task-title">{t.title}</div>
+                      </div>
                       <div className="dash-task-meta">
                         <span className="dash-task-course">{t.course}</span>
                         <span className="dash-task-due">Due: {t.due}</span>

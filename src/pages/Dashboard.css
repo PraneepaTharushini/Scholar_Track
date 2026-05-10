@@ -90,6 +90,18 @@
   min-width: 0;
 }
 
+.dash-task-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dash-task-emoji {
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 .dash-task-title {
   font-size: 13.5px;
   font-weight: 600;

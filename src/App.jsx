@@ -12,6 +12,7 @@ import Dashboard from './pages/Dashboard';
 import Notifications from './pages/Notifications';
 import SystemInfo from './pages/SystemInfo';
 import AcademicCalendar from './components/AcademicCalendar';
+import UploadPage from './pages/UploadPage';
 import './App.css';
 
 /* ── Page titles mapped to routes ─────────────────────────── */
@@ -27,28 +28,6 @@ const PAGE_TITLES = {
   '/settings':      'Settings',
 };
 
-/* ── Upload placeholder ─────────────────────────────────── */
-const UploadPage = () => (
-  <div style={{
-    display: 'flex', flexDirection: 'column', alignItems: 'center',
-    justifyContent: 'center', minHeight: '60vh', gap: 16,
-    color: 'var(--text-secondary)'
-  }}>
-    <div style={{
-      width: 80, height: 80, borderRadius: 20, background: '#EEF2FF',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36
-    }}>📤</div>
-    <h2 style={{ color: 'var(--text-primary)', fontSize: 22, fontWeight: 700, margin: 0 }}>Upload Documents</h2>
-    <p style={{ fontSize: 14, margin: 0, textAlign: 'center', maxWidth: 360 }}>
-      Upload your syllabi, assignments, and notes. Our OCR + NLP engine will automatically extract tasks and deadlines.
-    </p>
-    <button style={{
-      background: '#4F46E5', color: '#fff', border: 'none', borderRadius: 10,
-      padding: '12px 28px', fontSize: 14, fontWeight: 600, cursor: 'pointer'
-    }}>Choose Files to Upload</button>
-  </div>
-);
-
 /* ── Task page with detail view ──────────────────────────── */
 function TasksPage() {
   const [selectedTask, setSelectedTask] = useState(null);
@@ -63,14 +42,12 @@ function TasksPage() {
 
   if (selectedTask) {
     return (
-      <div style={{ padding: '28px 32px' }}>
-        <TaskDetail
-          task={selectedTask}
-          onBack={handleBack}
-          onUpdate={handleUpdate}
-          onDelete={handleDelete}
-        />
-      </div>
+      <TaskDetail
+        task={selectedTask}
+        onBack={handleBack}
+        onUpdate={handleUpdate}
+        onDelete={handleDelete}
+      />
     );
   }
   return <TaskManagement onView={handleView} />;
