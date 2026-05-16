@@ -8,6 +8,12 @@ import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import TaskManagement from './components/TaskManagement';
 import TaskDetail from './components/TaskDetail';
 import ProfilePage from './components/ProfileSettingsPage';
+import Dashboard from './pages/Dashboard';
+import Notifications from './pages/Notifications';
+import SystemInfo from './pages/SystemInfo';
+import AcademicCalendar from './components/AcademicCalendar';
+import UploadPage from './pages/UploadPage';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import './App.css';
 
 /* ── Page titles mapped to routes ─────────────────────────── */
@@ -23,22 +29,6 @@ const PAGE_TITLES = {
   '/settings':      'Settings',
 };
 
-/* ── Coming Soon placeholder ─────────────────────────────── */
-const ComingSoon = ({ title }) => (
-  <div style={{
-    display: 'flex', flexDirection: 'column', alignItems: 'center',
-    justifyContent: 'center', minHeight: '60vh', gap: 12,
-    color: 'var(--text-secondary)'
-  }}>
-    <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-      <rect width="56" height="56" rx="16" fill="#EEF2FF"/>
-      <path d="M20 28h16M28 20v16" stroke="#4F46E5" strokeWidth="2.5" strokeLinecap="round"/>
-    </svg>
-    <h2 style={{ color: 'var(--text-primary)', fontSize: 22, fontWeight: 700 }}>{title}</h2>
-    <p style={{ fontSize: 14 }}>This page is coming soon.</p>
-  </div>
-);
-
 /* ── Task page with detail view ──────────────────────────── */
 function TasksPage() {
   const [selectedTask, setSelectedTask] = useState(null);
@@ -53,14 +43,12 @@ function TasksPage() {
 
   if (selectedTask) {
     return (
-      <div style={{ padding: '28px 32px' }}>
-        <TaskDetail
-          task={selectedTask}
-          onBack={handleBack}
-          onUpdate={handleUpdate}
-          onDelete={handleDelete}
-        />
-      </div>
+      <TaskDetail
+        task={selectedTask}
+        onBack={handleBack}
+        onUpdate={handleUpdate}
+        onDelete={handleDelete}
+      />
     );
   }
   return <TaskManagement onView={handleView} />;
@@ -70,22 +58,23 @@ function TasksPage() {
 const AppLayout = () => {
   const location = useLocation();
   const title = PAGE_TITLES[location.pathname] || 'Scholar Track';
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <div className="app-layout">
       <Sidebar />
       <div className="app-main">
-        <Header title={title} user="Sarah" />
+        <Header title={title} user="Sarah" theme={theme} onToggleTheme={toggleTheme} />
         <main className="app-content">
           <Routes>
-            <Route path="/"              element={<ComingSoon title="Dashboard" />} />
-            <Route path="/upload"        element={<ComingSoon title="Upload Documents" />} />
+            <Route path="/"              element={<Dashboard />} />
+            <Route path="/upload"        element={<UploadPage />} />
             <Route path="/review"        element={<ReviewTaskPage />} />
             <Route path="/tasks"         element={<TasksPage />} />
-            <Route path="/calendar"      element={<ComingSoon title="Calendar" />} />
+            <Route path="/calendar"      element={<AcademicCalendar />} />
             <Route path="/analytics"     element={<AnalyticsDashboard />} />
-            <Route path="/notifications" element={<ComingSoon title="Notifications" />} />
-            <Route path="/system"        element={<ComingSoon title="System Info" />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/system"        element={<SystemInfo />} />
             <Route path="/settings"      element={<ProfilePage />} />
           </Routes>
         </main>
@@ -95,7 +84,7 @@ const AppLayout = () => {
 };
 
 /* ── Root App ─────────────────────────────────────────────── */
-function App() {
+function AppInner() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   if (!isLoggedIn) {
@@ -106,6 +95,14 @@ function App() {
     <BrowserRouter>
       <AppLayout />
     </BrowserRouter>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppInner />
+    </ThemeProvider>
   );
 }
 
