@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Scholar Track – Admin & System Info</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:#f0f2f8;display:flex;min-height:100vh}
+    .sidebar{width:220px;min-height:100vh;flex-shrink:0;background:linear-gradient(160deg,#1a1a3e 0%,#2d2d5f 100%);padding:24px 16px;display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100}
+    .logo{display:flex;align-items:center;gap:10px;margin-bottom:36px}
+    .logo-icon{width:32px;height:32px;background:#6366f1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+    .logo-text{color:#fff;font-size:16px;font-weight:700}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;color:rgba(255,255,255,0.6);font-size:13.5px;cursor:pointer;transition:all .2s;margin-bottom:4px;text-decoration:none}
+    .nav-item:hover{background:rgba(99,102,241,0.15);color:#fff}
+    .nav-item.active{background:#6366f1;color:#fff}
+    .nav-icon{font-size:16px;width:20px;text-align:center}
+    .sidebar-version{margin-top:auto;color:rgba(255,255,255,0.3);font-size:11px;padding:0 6px}
+    .main{margin-left:220px;flex:1;min-height:100vh;display:flex;flex-direction:column}
+    .topbar{background:#fff;height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:1px solid #e5e7eb;position:sticky;top:0;z-index:50}
+    .topbar-title{font-size:20px;font-weight:700;color:#1a1a3e}
+    .topbar-right{display:flex;align-items:center;gap:14px}
+    .avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
+    .badge-admin{background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px}
+    .content{padding:28px;flex:1}
+    .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+    .stat-card{border-radius:14px;padding:20px 22px;color:#fff;display:flex;align-items:center;gap:16px;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+    .stat-icon{font-size:28px;opacity:.9}
+    .stat-num{font-size:26px;font-weight:800;line-height:1}
+    .stat-lbl{font-size:12px;opacity:.85;margin-top:3px}
+    .tabs{display:flex;gap:4px;margin-bottom:20px;background:#fff;border-radius:10px;padding:5px;box-shadow:0 1px 4px rgba(0,0,0,.06);width:fit-content}
+    .tab{padding:8px 18px;border-radius:7px;font-size:13px;font-weight:600;color:#6b7280;cursor:pointer;border:none;background:none;transition:all .2s}
+    .tab.active{background:#6366f1;color:#fff}
+    .tab:hover:not(.active){background:#f3f4f6;color:#1a1a3e}
+    .panel{background:#fff;border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:20px;overflow:hidden}
+    .panel-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #f3f4f6}
+    .panel-title{font-size:15px;font-weight:700;color:#1a1a3e;display:flex;align-items:center;gap:8px}
+    .two-col{display:grid;grid-template-columns:1fr 320px;gap:20px}
+    table{width:100%;border-collapse:collapse;font-size:13.5px}
+    thead{background:#f9fafb}
+    th{padding:11px 16px;text-align:left;font-weight:600;color:#6b7280;border-bottom:2px solid #e5e7eb;font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+    td{padding:12px 16px;border-bottom:1px solid #f3f4f6;color:#374151}
+    tr:hover td{background:#fafafa}
+    .pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600}
+    .pill.green{background:#d1fae5;color:#065f46}
+    .pill.red{background:#fee2e2;color:#b91c1c}
+    .pill.amber{background:#fef3c7;color:#92400e}
+    .pill.blue{background:#dbeafe;color:#1e40af}
+    .dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+    .btn-xs{font-size:12px;font-weight:600;padding:4px 10px;border-radius:6px;border:none;cursor:pointer;transition:all .2s;margin-right:4px}
+    .btn-xs.edit{background:#dbeafe;color:#1d4ed8}
+    .btn-xs.edit:hover{background:#bfdbfe}
+    .btn-xs.del{background:#fee2e2;color:#b91c1c}
+    .btn-xs.del:hover{background:#fecaca}
+    .btn-xs.suspend{background:#fef3c7;color:#92400e}
+    .info-row{display:flex;justify-content:space-between;align-items:center;padding:13px 20px;border-bottom:1px solid #f3f4f6;font-size:13px}
+    .info-row:last-child{border-bottom:none}
+    .info-lbl{color:#6b7280;font-weight:500}
+    .info-val{color:#1a1a3e;font-weight:600}
+    .progress-bar{height:8px;background:#f3f4f6;border-radius:99px;overflow:hidden;margin-top:6px}
+    .progress-fill{height:100%;border-radius:99px;transition:width .5s}
+    .log-item{display:flex;align-items:flex-start;gap:12px;padding:12px 20px;border-bottom:1px solid #f3f4f6;font-size:13px}
+    .log-item:last-child{border-bottom:none}
+    .log-dot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0}
+    .log-text{flex:1;color:#374151}
+    .log-time{color:#9ca3af;font-size:12px;white-space:nowrap}
+    .module-card{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid #f3f4f6}
+    .module-card:last-child{border-bottom:none}
+    .module-num{width:28px;height:28px;border-radius:8px;background:#eef2ff;color:#6366f1;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .module-info{flex:1}
+    .module-name{font-size:13px;font-weight:600;color:#1a1a3e}
+    .module-member{font-size:12px;color:#9ca3af;margin-top:1px}
+    .search-bar{display:flex;align-items:center;gap:8px;padding:10px 20px;border-bottom:1px solid #f3f4f6}
+    .search-input{flex:1;border:1px solid #e5e7eb;border-radius:8px;padding:7px 12px;font-size:13px;outline:none;font-family:inherit}
+    .search-input:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+    .btn-primary{background:#6366f1;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer}
+    .btn-primary:hover{background:#4f46e5}
+    @media(max-width:1000px){.two-col{grid-template-columns:1fr}.stat-grid{grid-template-columns:repeat(2,1fr)}}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const navItems = [
+  { icon:'📊', label:'Dashboard', href:'index.html' },
+  { icon:'⬆️', label:'Upload Documents', href:'index.html' },
+  { icon:'✅', label:'Review Tasks', href:'index.html' },
+  { icon:'📝', label:'Tasks', href:'index.html' },
+  { icon:'📅', label:'Calendar', href:'index.html' },
+  { icon:'📈', label:'Analytics', href:'index.html' },
+  { icon:'🔔', label:'Notifications', href:'notifications.html' },
+  { icon:'ℹ️', label:'System Info', href:'admin.html', active:true },
+  { icon:'⚙️', label:'Settings', href:'index.html' },
+];
+
+const initialUsers = [
+  { id:'USR001', name:'Sarah Johnson', email:'sarah.johnson@gmail.com', joined:'Jan 15, 2026', role:'Student', tasks:47, docs:12, status:'Active' },
+  { id:'USR002', name:'Michael Chen', email:'michael.chen@gmail.com', joined:'Feb 03, 2026', role:'Student', tasks:31, docs:8, status:'Active' },
+  { id:'USR003', name:'Emma Rodriguez', email:'emma.rodriguez@gmail.com', joined:'Mar 10, 2026', role:'Student', tasks:55, docs:14, status:'Active' },
+  { id:'USR004', name:'James Wilson', email:'james.wilson@gmail.com', joined:'Mar 22, 2026', role:'Student', tasks:9, docs:3, status:'Inactive' },
+  { id:'USR005', name:'Priya Sharma', email:'priya.sharma@gmail.com', joined:'Apr 01, 2026', role:'Student', tasks:22, docs:6, status:'Active' },
+];
+
+const ocrStats = [
+  { type:'PDF Documents', processed:1247, success:'96.2%', avgTime:'2.3s', status:'Optimal' },
+  { type:'Images (PNG/JPG)', processed:856, success:'92.8%', avgTime:'1.8s', status:'Optimal' },
+  { type:'Email Screenshots', processed:743, success:'94.5%', avgTime:'2.1s', status:'Optimal' },
+  { type:'Syllabi / DOCX', processed:621, success:'89.3%', avgTime:'3.5s', status:'Optimal' },
+];
+
+const modules = [
+  { num:1, name:'User Management & Authentication', member:'C. Thinushanth', role:'Frontend + Backend' },
+  { num:2, name:'Document Upload & Data Extraction', member:'A.J.M.S. Ayodya', role:'Backend + OCR/NLP' },
+  { num:3, name:'Create & Manage Academic Tasks', member:'H.M.G.D. Bandara', role:'Frontend + Backend' },
+  { num:4, name:'Priority Analysis & Recommendation', member:'Y.M.P. Tharushini', role:'Backend + ML/Logic' },
+  { num:5, name:'Present Info & Send Reminders', member:'W.M.A.B. Wanasinghe', role:'Frontend + Notification UI' },
+];
+
+const logs = [
+  { msg:'Database backup completed successfully', time:'2 hrs ago', color:'#10b981' },
+  { msg:'New user registered: priya.sharma@gmail.com', time:'4 hrs ago', color:'#6366f1' },
+  { msg:'OCR service processed 23 documents', time:'5 hrs ago', color:'#10b981' },
+  { msg:'NLP models updated to v2.1.0', time:'12 hrs ago', color:'#10b981' },
+  { msg:'ML priority engine recalibrated', time:'1 day ago', color:'#f59e0b' },
+  { msg:'User authentication system verified', time:'1 day ago', color:'#10b981' },
+  { msg:'Security patches applied (CVE-2026-xxx)', time:'2 days ago', color:'#10b981' },
+  { msg:'Email SMTP connection tested OK', time:'2 days ago', color:'#10b981' },
+];
+
+function StatusPill({ s }) {
+  const cls = s === 'Active' || s === 'Optimal' ? 'green' : s === 'Inactive' ? 'red' : 'amber';
+  const dot = s === 'Active' || s === 'Optimal' ? '#10b981' : s === 'Inactive' ? '#ef4444' : '#f59e0b';
+  return <span className={`pill ${cls}`}><span className="dot" style={{background:dot}}/>{s}</span>;
+}
+
+function MetricBar({ pct, color }) {
+  return (
+    <div className="progress-bar">
+      <div className="progress-fill" style={{width:`${pct}%`, background:color}}/>
+    </div>
+  );
+}
+
+function App() {
+  const [tab, setTab] = useState('users');
+  const [users, setUsers] = useState(initialUsers);
+  const [search, setSearch] = useState('');
+  const [cpu, setCpu] = useState(34);
+  const [mem, setMem] = useState(35);
+
+  // Simulated live metrics
+  useEffect(() => {
+    const t = setInterval(() => {
+      setCpu(v => Math.min(90, Math.max(15, v + (Math.random()*6-3))));
+      setMem(v => Math.min(80, Math.max(25, v + (Math.random()*4-2))));
+    }, 2000);
+    return () => clearInterval(t);
+  }, []);
+
+  const filtered = users.filter(u =>
+    u.name.toLowerCase().includes(search.toLowerCase()) ||
+    u.email.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const deleteUser = id => setUsers(u => u.filter(x => x.id !== id));
+  const toggleStatus = id => setUsers(u => u.map(x => x.id===id ? {...x, status: x.status==='Active'?'Inactive':'Active'} : x));
+
+  const activeCount = users.filter(u=>u.status==='Active').length;
+
+  return (
+    <>
+      <div className="sidebar">
+        <div className="logo">
+          <div className="logo-icon">✓</div>
+          <span className="logo-text">Scholar Track</span>
+        </div>
+        {navItems.map(n=>(
+          <a key={n.label} className={`nav-item${n.active?' active':''}`} href={n.href}>
+            <span className="nav-icon">{n.icon}</span>
+            <span>{n.label}</span>
+          </a>
+        ))}
+        <div className="sidebar-version">v1.0.0</div>
+      </div>
+
+      <div className="main">
+        <div className="topbar">
+          <div className="topbar-title">ℹ️ System Information & Admin</div>
+          <div className="topbar-right">
+            <span className="badge-admin">👑 Admin</span>
+            <div>
+              <div style={{fontWeight:600,fontSize:13,color:'#1a1a3e'}}>Admin</div>
+              <div style={{fontSize:11,color:'#9ca3af'}}>System Manager</div>
+            </div>
+            <div className="avatar">A</div>
+          </div>
+        </div>
+
+        <div className="content">
+          {/* Stats */}
+          <div className="stat-grid">
+            {[
+              {label:'Total Students',num:users.length,icon:'👥',bg:'linear-gradient(135deg,#6366f1,#8b5cf6)'},
+              {label:'Active Users',num:activeCount,icon:'✅',bg:'linear-gradient(135deg,#10b981,#059669)'},
+              {label:'Tasks Created',num:'12,563',icon:'📝',bg:'linear-gradient(135deg,#f59e0b,#d97706)'},
+              {label:'Docs Processed',num:'3,467',icon:'📄',bg:'linear-gradient(135deg,#ef4444,#dc2626)'},
+            ].map(s=>(
+              <div key={s.label} className="stat-card" style={{background:s.bg}}>
+                <div className="stat-icon">{s.icon}</div>
+                <div>
+                  <div className="stat-num">{s.num}</div>
+                  <div className="stat-lbl">{s.label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tabs */}
+          <div className="tabs">
+            {[['users','👥 Users'],['system','🖥️ System Health'],['ocr','📄 OCR Stats'],['modules','🧩 Modules'],['logs','📋 Activity Log']].map(([k,l])=>(
+              <button key={k} className={`tab${tab===k?' active':''}`} onClick={()=>setTab(k)}>{l}</button>
+            ))}
+          </div>
+
+          {/* Users tab */}
+          {tab==='users' && (
+            <div className="panel">
+              <div className="panel-header">
+                <div className="panel-title">👥 Student Account Management</div>
+                <button className="btn-primary">+ Add User</button>
+              </div>
+              <div className="search-bar">
+                <span>🔍</span>
+                <input className="search-input" placeholder="Search by name or email…" value={search} onChange={e=>setSearch(e.target.value)}/>
+              </div>
+              <div style={{overflowX:'auto'}}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>User ID</th><th>Name</th><th>Email</th><th>Joined</th>
+                      <th>Tasks</th><th>Docs</th><th>Status</th><th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map(u=>(
+                      <tr key={u.id}>
+                        <td style={{color:'#6b7280',fontFamily:'monospace'}}>{u.id}</td>
+                        <td style={{fontWeight:600}}>{u.name}</td>
+                        <td style={{color:'#6b7280'}}>{u.email}</td>
+                        <td>{u.joined}</td>
+                        <td><span className="pill blue">{u.tasks}</span></td>
+                        <td>{u.docs}</td>
+                        <td><StatusPill s={u.status}/></td>
+                        <td>
+                          <button className="btn-xs edit">Edit</button>
+                          <button className="btn-xs suspend" onClick={()=>toggleStatus(u.id)}>{u.status==='Active'?'Suspend':'Restore'}</button>
+                          <button className="btn-xs del" onClick={()=>deleteUser(u.id)}>Delete</button>
+                        </td>
+                      </tr>
+                    ))}
+                    {filtered.length===0 && (
+                      <tr><td colSpan={8} style={{textAlign:'center',padding:'32px',color:'#9ca3af'}}>No users found</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* System Health tab */}
+          {tab==='system' && (
+            <div className="two-col">
+              <div>
+                <div className="panel">
+                  <div className="panel-header"><div className="panel-title">🖥️ Service Status</div></div>
+                  {[
+                    {label:'MySQL Database',val:'Online',color:'#10b981'},
+                    {label:'Flask API Server',val:'Operational',color:'#10b981'},
+                    {label:'OCR Engine (Tesseract)',val:'Running',color:'#10b981'},
+                    {label:'NLP Pipeline (spaCy)',val:'Operational',color:'#10b981'},
+                    {label:'ML Priority Engine',val:'Running',color:'#10b981'},
+                    {label:'Gmail SMTP',val:'Connected',color:'#10b981'},
+                    {label:'Frontend (React)',val:'Serving',color:'#10b981'},
+                  ].map(s=>(
+                    <div className="info-row" key={s.label}>
+                      <span className="info-lbl">{s.label}</span>
+                      <span className="pill green"><span className="dot" style={{background:s.color}}/>{s.val}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="panel">
+                  <div className="panel-header"><div className="panel-title">🔐 Version & Build</div></div>
+                  {[
+                    {l:'Application Version',v:'v1.0.0'},
+                    {l:'Build Number',v:'#2026-0421'},
+                    {l:'Last Deployed',v:'Apr 18, 2026'},
+                    {l:'Flask API Version',v:'v2.1.0'},
+                    {l:'React Version',v:'18.x'},
+                    {l:'Database',v:'MySQL 8.0 (Community)'},
+                    {l:'Hosting',v:'Render (Free Tier)'},
+                  ].map(r=>(
+                    <div className="info-row" key={r.l}>
+                      <span className="info-lbl">{r.l}</span>
+                      <span className="info-val">{r.v}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="panel">
+                  <div className="panel-header"><div className="panel-title">📊 Live Metrics</div></div>
+                  <div style={{padding:'16px 20px'}}>
+                    {[
+                      {label:'CPU Usage',val:Math.round(cpu),unit:'%',color:'#6366f1'},
+                      {label:'Memory Usage',val:Math.round(mem),unit:'%',color:'#8b5cf6'},
+                      {label:'Storage Used',val:52,unit:'%',color:'#f59e0b'},
+                      {label:'OCR Queue',val:8,unit:'%',color:'#10b981'},
+                    ].map(m=>(
+                      <div key={m.label} style={{marginBottom:18}}>
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:13,marginBottom:6}}>
+                          <span style={{color:'#6b7280',fontWeight:500}}>{m.label}</span>
+                          <span style={{fontWeight:700,color:m.color}}>{m.val}{m.unit}</span>
+                        </div>
+                        <MetricBar pct={m.val} color={m.color}/>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="info-row"><span className="info-lbl">Server Response</span><span className="info-val">245ms</span></div>
+                  <div className="info-row"><span className="info-lbl">Uptime</span><span className="info-val" style={{color:'#10b981'}}>98.5% (30 days)</span></div>
+                  <div className="info-row"><span className="info-lbl">Database Size</span><span className="info-val">4.2 GB</span></div>
+                  <div className="info-row"><span className="info-lbl">Active Sessions</span><span className="info-val">127</span></div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* OCR tab */}
+          {tab==='ocr' && (
+            <div className="panel">
+              <div className="panel-header"><div className="panel-title">📄 OCR & NLP Processing Statistics</div></div>
+              <div style={{overflowX:'auto'}}>
+                <table>
+                  <thead>
+                    <tr><th>Document Type</th><th>Total Processed</th><th>Success Rate</th><th>Avg. Time</th><th>Status</th></tr>
+                  </thead>
+                  <tbody>
+                    {ocrStats.map(r=>(
+                      <tr key={r.type}>
+                        <td style={{fontWeight:600}}>{r.type}</td>
+                        <td>{r.processed.toLocaleString()}</td>
+                        <td>
+                          <div>{r.success}</div>
+                          <MetricBar pct={parseFloat(r.success)} color="#10b981"/>
+                        </td>
+                        <td>{r.avgTime}</td>
+                        <td><StatusPill s={r.status}/></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{padding:'16px 20px',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,borderTop:'1px solid #f3f4f6',marginTop:4}}>
+                {[
+                  {label:'Total Processed',val:'3,467',icon:'📄'},
+                  {label:'Overall Success',val:'93.2%',icon:'✅'},
+                  {label:'Tasks Extracted',val:'12,563',icon:'📝'},
+                ].map(s=>(
+                  <div key={s.label} style={{textAlign:'center',padding:'12px',background:'#f9fafb',borderRadius:10}}>
+                    <div style={{fontSize:24,marginBottom:6}}>{s.icon}</div>
+                    <div style={{fontSize:20,fontWeight:800,color:'#1a1a3e'}}>{s.val}</div>
+                    <div style={{fontSize:12,color:'#9ca3af'}}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Modules tab */}
+          {tab==='modules' && (
+            <div className="panel">
+              <div className="panel-header"><div className="panel-title">🧩 Module Split-up & Team</div></div>
+              {modules.map(m=>(
+                <div className="module-card" key={m.num}>
+                  <div className="module-num">{m.num}</div>
+                  <div className="module-info">
+                    <div className="module-name">{m.name}</div>
+                    <div className="module-member">👤 {m.member} · <span style={{color:'#6366f1'}}>{m.role}</span></div>
+                  </div>
+                  <span className="pill green"><span className="dot" style={{background:'#10b981'}}/>Active</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Logs tab */}
+          {tab==='logs' && (
+            <div className="panel">
+              <div className="panel-header">
+                <div className="panel-title">📋 Recent System Activity</div>
+                <span style={{fontSize:12,color:'#9ca3af'}}>{logs.length} events</span>
+              </div>
+              {logs.map((l,i)=>(
+                <div className="log-item" key={i}>
+                  <div className="log-dot" style={{background:l.color}}/>
+                  <div className="log-text">{l.msg}</div>
+                  <div className="log-time">{l.time}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
