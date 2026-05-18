@@ -93,16 +93,6 @@
   white-space: nowrap;
 }
 
-.sidebar__nav-indicator {
-  width: 4px;
-  height: 18px;
-  background: var(--primary);
-  border-radius: 2px;
-  position: absolute;
-  right: -12px;
-  box-shadow: 0 0 8px rgba(79,70,229,0.6);
-}
-
 .sidebar__footer {
   padding: 16px 20px;
   border-top: 1px solid rgba(255,255,255,0.08);

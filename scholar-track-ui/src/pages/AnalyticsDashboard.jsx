@@ -1,7 +1,7 @@
-import React from 'react';
+﻿import React from 'react';
 import './AnalyticsDashboard.css';
 
-/* ── Data ─────────────────────────────────────────────────── */
+/* ΓöÇΓöÇ Data ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 const stats = [
   { label: 'Total Tasks', value: 18, color: 'default' },
   { label: 'Completed',   value: 9,  color: 'green'   },
@@ -22,19 +22,19 @@ const priorities = [
 ];
 
 const insights = [
-  'You complete most tasks 1–2 days before the deadline.',
+  'You complete most tasks 1ΓÇô2 days before the deadline.',
   'High priority tasks need earlier attention.',
   'Workload peak detected in mid-month.',
 ];
 
-/* ── Component ───────────────────────────────────────────── */
+/* ΓöÇΓöÇ Component ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 const AnalyticsDashboard = () => {
   const maxPct = Math.max(...taskStatus.map((t) => t.pct));
 
   return (
     <div className="an-page">
 
-      {/* ── Top stats ─────────────────────────────────── */}
+      {/* ΓöÇΓöÇ Top stats ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */}
       <div className="an-stats-grid">
         {/* Row 1: 3 cards */}
         <div className="an-stats-row">
@@ -59,7 +59,7 @@ const AnalyticsDashboard = () => {
         </div>
       </div>
 
-      {/* ── Middle: chart + priorities ─────────────────── */}
+      {/* ΓöÇΓöÇ Middle: chart + priorities ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */}
       <div className="an-middle">
 
         {/* Task Status Overview */}
@@ -93,7 +93,7 @@ const AnalyticsDashboard = () => {
               <li key={p.label} className="an-priority-list__item">
                 <span className="an-priority-list__dot" style={{ background: p.dot }} />
                 <span className="an-priority-list__label">
-                  {p.label} – <strong>{p.count}</strong>
+                  {p.label} ΓÇô <strong>{p.count}</strong>
                 </span>
               </li>
             ))}
@@ -102,7 +102,7 @@ const AnalyticsDashboard = () => {
 
       </div>
 
-      {/* ── AI Insights ───────────────────────────────── */}
+      {/* ΓöÇΓöÇ AI Insights ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */}
       <div className="an-insights">
         <div className="an-insights__header">
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">

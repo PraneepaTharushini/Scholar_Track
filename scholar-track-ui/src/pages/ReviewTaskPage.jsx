@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import './ReviewTaskPage.css';
 
-const PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Critical'];
 
 const CATEGORY_OPTIONS = ['Assignment', 'Exam', 'Project', 'Scholarship', 'Quiz', 'Other'];
 
@@ -11,7 +10,6 @@ const initialTasks = [
     taskTitle: '',
     subject: '',
     deadline: '',
-    priority: 'Low',
     category: 'Project',
     description: '',
     confidence: 94,
@@ -22,7 +20,6 @@ const initialTasks = [
     taskTitle: '',
     subject: '',
     deadline: '',
-    priority: 'Low',
     category: 'Project',
     description: '',
     confidence: 61,
@@ -41,15 +38,6 @@ const ConfidenceBadge = ({ score }) => {
   );
 };
 
-const PriorityBadge = ({ priority }) => {
-  const map = {
-    Low: 'low',
-    Medium: 'medium',
-    High: 'high',
-    Critical: 'critical',
-  };
-  return <span className={`priority-pill priority-pill--${map[priority] || 'medium'}`}>{priority}</span>;
-};
 
 const TaskCard = ({ task, index, onChange, onRemove }) => {
   const handleChange = (field, value) => {
@@ -64,7 +52,6 @@ const TaskCard = ({ task, index, onChange, onRemove }) => {
           <ConfidenceBadge score={task.confidence} />
         </div>
         <div className="task-card__header-right">
-          <PriorityBadge priority={task.priority} />
           <button
             className="task-card__remove-btn"
             onClick={() => onRemove(task.id)}
@@ -146,24 +133,6 @@ const TaskCard = ({ task, index, onChange, onRemove }) => {
         </div>
 
         <div className="task-card__row task-card__row--two-col">
-          <div className="form-group">
-            <label className="form-label">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{marginRight: '5px', verticalAlign: 'middle'}}>
-                <path d="M7 1l1.5 4H13l-3.5 2.5 1.5 4L7 9 3 11.5l1.5-4L1 5h4.5L7 1z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
-              </svg>
-              Priority
-            </label>
-            <select
-              className="form-select"
-              value={task.priority}
-              onChange={(e) => handleChange('priority', e.target.value)}
-            >
-              {PRIORITY_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
-          </div>
-
           <div className="form-group">
             <label className="form-label">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{marginRight: '5px', verticalAlign: 'middle'}}>
@@ -286,7 +255,7 @@ const ReviewTaskPage = () => {
         </div>
       ) : (
         <div className="review-empty">
-          <div className="review-empty__icon">🗂️</div>
+          <div className="review-empty__icon">≡ƒùé∩╕Å</div>
           <p>All tasks removed. No tasks to review.</p>
         </div>
       )}
