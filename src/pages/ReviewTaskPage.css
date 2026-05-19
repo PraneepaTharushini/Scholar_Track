@@ -1,4 +1,4 @@
-﻿.review-page {
+.review-page {
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -276,6 +276,31 @@
 .priority-pill--critical {
   background: #FEF2F2;
   color: #7F1D1D;
+}
+
+/* ── Priority Select ──────────────────────────────────────────────────────── */
+.priority-select--low {
+  border-color: #86EFAC !important;
+  color: #166534 !important;
+  background-color: #F0FDF4 !important;
+}
+
+.priority-select--medium {
+  border-color: #FCD34D !important;
+  color: #78350F !important;
+  background-color: #FFFBEB !important;
+}
+
+.priority-select--high {
+  border-color: #FDBA74 !important;
+  color: #7C2D12 !important;
+  background-color: #FFF7ED !important;
+}
+
+.priority-select--critical {
+  border-color: #FCA5A5 !important;
+  color: #7F1D1D !important;
+  background-color: #FEF2F2 !important;
 }
 
 /* ΓöÇΓöÇ Form Elements ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */

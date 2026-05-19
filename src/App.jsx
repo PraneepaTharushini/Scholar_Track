@@ -55,7 +55,7 @@ function TasksPage() {
 }
 
 /* ── Main app layout (after login) ──────────────────────── */
-const AppLayout = () => {
+const AppLayout = ({ user, onLogout }) => {
   const location = useLocation();
   const title = PAGE_TITLES[location.pathname] || 'Scholar Track';
   const { theme, toggleTheme } = useTheme();
@@ -64,7 +64,7 @@ const AppLayout = () => {
     <div className="app-layout">
       <Sidebar />
       <div className="app-main">
-        <Header title={title} user="Sarah" theme={theme} onToggleTheme={toggleTheme} />
+        <Header title={title} user={user?.name || 'Student'} theme={theme} onToggleTheme={toggleTheme} />
         <main className="app-content">
           <Routes>
             <Route path="/"              element={<Dashboard />} />
@@ -85,15 +85,24 @@ const AppLayout = () => {
 
 /* ── Root App ─────────────────────────────────────────────── */
 function AppInner() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
 
-  if (!isLoggedIn) {
-    return <LoginPage onLogin={() => setIsLoggedIn(true)} />;
+  const handleLogin = (userData) => {
+    setUser(userData);
+  };
+
+  const handleLogout = () => {
+    import('./services/api').then(({ api }) => api.clearToken());
+    setUser(null);
+  };
+
+  if (!user) {
+    return <LoginPage onLogin={handleLogin} />;
   }
 
   return (
     <BrowserRouter>
-      <AppLayout />
+      <AppLayout user={user} onLogout={handleLogout} />
     </BrowserRouter>
   );
 }
