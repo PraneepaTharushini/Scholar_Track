@@ -62,7 +62,7 @@
   color: var(--text-primary);
 }
 
-.tm-filters { display: flex; gap: 8px; }
+.tm-filters { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .tm-select {
   padding: 9px 32px 9px 12px;
@@ -146,6 +146,7 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-bottom: 1.5px solid var(--border);
+  white-space: nowrap;
 }
 
 .tm-table td {
@@ -217,22 +218,61 @@
 .tm-status.pending   { color: var(--warning); }
 .tm-status.completed { color: var(--success); }
 
-.tm-view-btn-action {
-  padding: 6px 14px;
-  border-radius: 8px;
-  border: 1.5px solid var(--border);
-  background: var(--bg-card);
+/* ── Action buttons group ─────────────────────────────────────── */
+.tm-action-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.tm-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1.5px solid transparent;
   font-size: 12px;
   font-weight: 600;
-  color: var(--primary);
   cursor: pointer;
   transition: all 0.15s;
   white-space: nowrap;
+  font-family: inherit;
 }
 
-.tm-view-btn-action:hover {
+/* View button */
+.tm-action-view {
   background: var(--primary-light);
-  border-color: var(--primary);
+  color: var(--primary);
+  border-color: transparent;
+}
+.tm-action-view:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* Mark Done button — visible in both light & dark mode */
+.tm-action-done {
+  background: var(--success-light);
+  color: var(--success);
+  border-color: transparent;
+}
+.tm-action-done:hover {
+  background: var(--success);
+  color: #fff;
+}
+
+/* Delete button */
+.tm-action-delete {
+  background: var(--danger-light);
+  color: var(--danger);
+  border-color: transparent;
+  padding: 5px 8px;
+}
+.tm-action-delete:hover {
+  background: var(--danger);
+  color: #fff;
 }
 
 /* ── CARD view ───────────────────────────────────────────────── */
@@ -297,13 +337,174 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding-top: 8px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+/* ── Delete confirm modal ─────────────────────────────────── */
+.tm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  animation: tmOverlayIn 0.2s ease;
+}
+
+@keyframes tmOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.tm-modal {
+  background: var(--bg-card);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.25);
+  width: 100%;
+  max-width: 400px;
+  overflow: hidden;
+  animation: tmModalUp 0.22s ease;
+}
+
+@keyframes tmModalUp {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.tm-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tm-modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.tm-modal-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: none;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.tm-modal-close:hover {
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+.tm-modal-body {
+  padding: 18px 20px;
+}
+
+.tm-delete-warning {
+  display: flex;
+  gap: 12px;
+  background: var(--danger-light);
+  border-radius: 10px;
+  padding: 14px 16px;
+  align-items: flex-start;
+}
+
+.tm-delete-warning-icon { font-size: 22px; flex-shrink: 0; margin-top: 1px; }
+
+.tm-delete-warning-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--danger);
+  margin-bottom: 4px;
+}
+
+.tm-delete-warning-sub {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.tm-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
   border-top: 1px solid var(--border);
 }
 
+.tm-modal-btn-cancel {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+}
+
+.tm-modal-btn-cancel:hover { background: var(--bg-hover); }
+
+.tm-modal-btn-delete {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: var(--danger);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  font-family: inherit;
+}
+
+.tm-modal-btn-delete:hover { opacity: 0.88; }
+
 /* ── Responsive ─────────────────────────────────────────────── */
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .tm-summary { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 900px) {
   .tm-toolbar { flex-direction: column; align-items: stretch; }
   .tm-search-wrap { min-width: unset; }
+  .tm-filters { justify-content: stretch; }
+  .tm-filters .tm-select { flex: 1; }
+  .tm-view-toggle { align-self: flex-end; }
+}
+
+@media (max-width: 700px) {
+  /* Switch table to stacked cards on small screens */
+  .tm-table-wrap { display: none; }
+  .tm-summary { grid-template-columns: repeat(2, 1fr); }
+
+  /* Always show card view on mobile regardless of toggle */
+  .tm-cards { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .tm-summary { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tm-sum-card { padding: 12px 14px; gap: 10px; }
+  .tm-sum-val { font-size: 22px; }
+  .tm-cards { grid-template-columns: 1fr; }
+  .tm-action-group { gap: 4px; }
+  .tm-action-btn { font-size: 11px; padding: 4px 8px; }
 }

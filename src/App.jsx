@@ -5,7 +5,7 @@ import Header from './components/Header';
 import LoginPage from './components/LoginPage';
 import ReviewTaskPage from './pages/ReviewTaskPage';
 import AnalyticsDashboard from './pages/AnalyticsDashboard';
-import TaskManagement from './components/TaskManagement';
+import TaskManagement, { INITIAL_TASKS } from './components/TaskManagement';
 import TaskDetail from './components/TaskDetail';
 import ProfilePage from './components/ProfileSettingsPage';
 import Dashboard from './pages/Dashboard';
@@ -30,28 +30,51 @@ const PAGE_TITLES = {
 };
 
 /* ── Task page with detail view ──────────────────────────── */
+
 function TasksPage() {
+  const [tasks, setTasks] = useState(INITIAL_TASKS);
   const [selectedTask, setSelectedTask] = useState(null);
-  const [tasks, setTasks] = useState(null); // null = use TaskManagement's internal state
 
   const handleView = (task) => setSelectedTask(task);
   const handleBack = () => setSelectedTask(null);
+
+  // Update task in list and selected view
   const handleUpdate = (updated) => {
+    setTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
     setSelectedTask(updated);
   };
-  const handleDelete = () => setSelectedTask(null);
+
+  // Delete task from list and go back
+  const handleDelete = (id) => {
+    setTasks(prev => prev.filter(t => t.id !== id));
+    setSelectedTask(null);
+  };
+
+  // Mark a task done directly from the list
+  const handleMarkDone = (id) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, status: 'completed' } : t));
+  };
 
   if (selectedTask) {
+    // keep selected task in sync with list
+    const freshTask = tasks.find(t => t.id === selectedTask.id) || selectedTask;
     return (
       <TaskDetail
-        task={selectedTask}
+        task={freshTask}
         onBack={handleBack}
         onUpdate={handleUpdate}
         onDelete={handleDelete}
       />
     );
   }
-  return <TaskManagement onView={handleView} />;
+  return (
+    <TaskManagement
+      tasks={tasks}
+      onView={handleView}
+      onMarkDone={handleMarkDone}
+      onDelete={handleDelete}
+    />
+  );
 }
 
 /* ── Main app layout (after login) ──────────────────────── */

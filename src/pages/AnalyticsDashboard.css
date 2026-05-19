@@ -1,4 +1,4 @@
-﻿.an-page {
+.an-page {
   max-width: 1100px;
   margin: 0 auto;
   padding: 28px 32px 48px;
@@ -56,9 +56,9 @@
 }
 
 .an-stat-card__value--default { color: var(--text-primary); }
-.an-stat-card__value--green   { color: #16A34A; }
-.an-stat-card__value--orange  { color: #D97706; }
-.an-stat-card__value--red     { color: #DC2626; }
+.an-stat-card__value--green   { color: var(--success); }
+.an-stat-card__value--orange  { color: var(--warning); }
+.an-stat-card__value--red     { color: var(--danger); }
 
 /* ΓöÇΓöÇ Middle section ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 .an-middle {
@@ -105,7 +105,7 @@
 .an-bar-chart__track {
   flex: 1;
   width: 100%;
-  background: #F3F4F6;
+  background: var(--bg-hover);
   border-radius: 8px;
   overflow: hidden;
   display: flex;
@@ -178,8 +178,8 @@
 
 /* ΓöÇΓöÇ AI Insights ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 .an-insights {
-  background: linear-gradient(135deg, #EEF2FF 0%, #F0F9FF 100%);
-  border: 1.5px solid rgba(79,70,229,0.15);
+  background: var(--primary-light);
+  border: 1.5px solid var(--border);
   border-radius: var(--radius);
   padding: 20px 24px;
   position: relative;
@@ -220,7 +220,7 @@
   align-items: flex-start;
   gap: 10px;
   font-size: 14px;
-  color: #374151;
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 

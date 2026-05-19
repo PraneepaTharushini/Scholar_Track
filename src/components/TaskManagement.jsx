@@ -25,7 +25,7 @@ function getTaskIcon(title = '') {
   return TASK_ICONS.default;
 }
 
-const INITIAL_TASKS = [
+export const INITIAL_TASKS = [
   {
     id: 1,
     title: 'Database Assignment 02',
@@ -106,17 +106,17 @@ function daysUntil(str) {
   if (days === 0) return { label: 'Due Today', color: '#ef4444' };
   if (days === 1) return { label: 'Tomorrow', color: '#f59e0b' };
   return { label: `${days}d left`, color: days <= 5 ? '#f59e0b' : '#10b981' };
-};
+}
 
-export default function TaskManagement({ onView }) {
-  const [tasks] = useState(INITIAL_TASKS);
+export default function TaskManagement({ tasks, onView, onMarkDone, onDelete }) {
   const [subjectFilter, setSubjectFilter] = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState('table'); // 'table' | 'cards'
+  const [viewMode, setViewMode] = useState('table');
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
-  const subjects = ['All', ...new Set(INITIAL_TASKS.map(t => t.subjectFull))];
+  const subjects = ['All', ...new Set(tasks.map(t => t.subjectFull))];
 
   const filtered = tasks.filter(t => {
     const matchSubject  = subjectFilter === 'All' || t.subjectFull === subjectFilter;
@@ -131,6 +131,21 @@ export default function TaskManagement({ onView }) {
     pending:   tasks.filter(t => t.status === 'pending').length,
     completed: tasks.filter(t => t.status === 'completed').length,
     high:      tasks.filter(t => t.priority === 'high').length,
+  };
+
+  const handleDeleteClick = (e, taskId) => {
+    e.stopPropagation();
+    setDeleteConfirmId(taskId);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (onDelete) onDelete(deleteConfirmId);
+    setDeleteConfirmId(null);
+  };
+
+  const handleMarkDone = (e, task) => {
+    e.stopPropagation();
+    if (onMarkDone) onMarkDone(task.id);
   };
 
   return (
@@ -205,7 +220,7 @@ export default function TaskManagement({ onView }) {
                 <th>Deadline</th>
                 <th>Priority</th>
                 <th>Status</th>
-                <th>Action</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -241,9 +256,31 @@ export default function TaskManagement({ onView }) {
                       </span>
                     </td>
                     <td>
-                      <button className="tm-view-btn-action" onClick={() => onView(task)}>
-                        View →
-                      </button>
+                      <div className="tm-action-group">
+                        <button
+                          className="tm-action-btn tm-action-view"
+                          onClick={() => onView(task)}
+                          title="View details"
+                        >
+                          👁 View
+                        </button>
+                        {task.status !== 'completed' && (
+                          <button
+                            className="tm-action-btn tm-action-done"
+                            onClick={(e) => handleMarkDone(e, task)}
+                            title="Mark as done"
+                          >
+                            ✅ Done
+                          </button>
+                        )}
+                        <button
+                          className="tm-action-btn tm-action-delete"
+                          onClick={(e) => handleDeleteClick(e, task.id)}
+                          title="Delete task"
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -274,15 +311,64 @@ export default function TaskManagement({ onView }) {
                   <span className={`tm-status ${task.status}`}>
                     {task.status === 'completed' ? '✅ Completed' : '⏳ Pending'}
                   </span>
-                  <button className="tm-view-btn-action" onClick={() => onView(task)}>View →</button>
+                  <div className="tm-action-group">
+                    <button
+                      className="tm-action-btn tm-action-view"
+                      onClick={() => onView(task)}
+                      title="View details"
+                    >
+                      👁 View
+                    </button>
+                    {task.status !== 'completed' && (
+                      <button
+                        className="tm-action-btn tm-action-done"
+                        onClick={(e) => handleMarkDone(e, task)}
+                        title="Mark as done"
+                      >
+                        ✅ Done
+                      </button>
+                    )}
+                    <button
+                      className="tm-action-btn tm-action-delete"
+                      onClick={(e) => handleDeleteClick(e, task.id)}
+                      title="Delete task"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
       )}
+
+      {/* ── Delete confirm modal ── */}
+      {deleteConfirmId && (
+        <div className="tm-modal-overlay" onClick={() => setDeleteConfirmId(null)}>
+          <div className="tm-modal" onClick={e => e.stopPropagation()}>
+            <div className="tm-modal-header">
+              <span className="tm-modal-title">🗑️ Delete Task</span>
+              <button className="tm-modal-close" onClick={() => setDeleteConfirmId(null)}>✕</button>
+            </div>
+            <div className="tm-modal-body">
+              <div className="tm-delete-warning">
+                <span className="tm-delete-warning-icon">⚠️</span>
+                <div>
+                  <div className="tm-delete-warning-title">This action cannot be undone</div>
+                  <div className="tm-delete-warning-sub">
+                    Are you sure you want to permanently delete this task?
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="tm-modal-footer">
+              <button className="tm-modal-btn-cancel" onClick={() => setDeleteConfirmId(null)}>Cancel</button>
+              <button className="tm-modal-btn-delete" onClick={handleDeleteConfirm}>Delete Task</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-export { INITIAL_TASKS };
