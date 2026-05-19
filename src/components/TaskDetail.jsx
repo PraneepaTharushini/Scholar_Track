@@ -2,6 +2,23 @@
 import React, { useState } from 'react';
 import './TaskDetail.css';
 
+/**
+ * Mirror of the backend compute_priority logic.
+ * Returns 'critical' | 'high' | 'medium' | 'low' based on days until deadline.
+ */
+function computePriority(deadlineStr) {
+  if (!deadlineStr) return 'low';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dl = new Date(deadlineStr);
+  dl.setHours(0, 0, 0, 0);
+  const daysLeft = Math.round((dl - today) / (1000 * 60 * 60 * 24));
+  if (daysLeft <= 1)  return 'critical';
+  if (daysLeft === 2) return 'high';
+  if (daysLeft === 3) return 'medium';
+  return 'low';
+}
+
 const TASK_ICONS = {
   assignment:   '📝',
   quiz:         '❓',
@@ -40,9 +57,10 @@ function daysUntil(str) {
 }
 
 const PRIORITY_CONFIG = {
-  high:   { label: '🔴 High',   cls: 'high' },
-  medium: { label: '🟡 Medium', cls: 'medium' },
-  low:    { label: '🟢 Low',    cls: 'low' },
+  critical: { label: '🔴 Critical', cls: 'critical' },
+  high:     { label: '🔴 High',     cls: 'high' },
+  medium:   { label: '🟡 Medium',   cls: 'medium' },
+  low:      { label: '🟢 Low',      cls: 'low' },
 };
 
 const SUBJECTS = [
@@ -69,8 +87,17 @@ export default function TaskDetail({ task: initialTask, onBack, onUpdate, onDele
     description: task.description,
   });
 
-  const handleEditChange = (e) =>
-    setEditForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditForm(prev => {
+      const updated = { ...prev, [name]: value };
+      // Auto-recompute priority whenever deadline changes
+      if (name === 'deadline') {
+        updated.priority = computePriority(value);
+      }
+      return updated;
+    });
+  };
 
   const handleEditSave = () => {
     const updated = {
@@ -270,12 +297,14 @@ export default function TaskDetail({ task: initialTask, onBack, onUpdate, onDele
                   <input className="td-field-input" type="date" name="deadline" value={editForm.deadline} onChange={handleEditChange} />
                 </div>
                 <div className="td-field">
-                  <label className="td-field-label">Priority</label>
-                  <select className="td-field-select" name="priority" value={editForm.priority} onChange={handleEditChange}>
-                    <option value="high">🔴 High</option>
-                    <option value="medium">🟡 Medium</option>
-                    <option value="low">🟢 Low</option>
-                  </select>
+                  <label className="td-field-label">
+                    Priority
+                    <span style={{marginLeft: '6px', fontSize: '10px', opacity: 0.55, fontWeight: 400}}>(auto)</span>
+                  </label>
+                  {/* Read-only: always computed from deadline */}
+                  <div className="td-field-select" style={{cursor: 'default', userSelect: 'none'}}>
+                    {PRIORITY_CONFIG[editForm.priority]?.label || '🟢 Low'}
+                  </div>
                 </div>
                 <div className="td-field">
                   <label className="td-field-label">Status</label>
