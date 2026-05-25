@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Header.css';
 
-const Header = ({ title, user = 'Sarah', theme = 'light', onToggleTheme }) => {
+const Header = ({ title, user = 'Sarah', theme = 'light', onToggleTheme, onLogout }) => {
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -80,7 +80,10 @@ const Header = ({ title, user = 'Sarah', theme = 'light', onToggleTheme }) => {
               <div className="header__drop-divider" />
               <button
                 className="header__drop-item danger"
-                onClick={() => window.location.reload()}
+                onClick={() => {
+                  setProfileOpen(false);
+                  onLogout?.();
+                }}
               >
                 <span>🚪</span> Sign Out
               </button>

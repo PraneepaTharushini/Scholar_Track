@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -87,7 +87,13 @@ const AppLayout = ({ user, onLogout }) => {
     <div className="app-layout">
       <Sidebar />
       <div className="app-main">
-        <Header title={title} user={user?.name || 'Student'} theme={theme} onToggleTheme={toggleTheme} />
+        <Header
+          title={title}
+          user={user?.name || 'Student'}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          onLogout={onLogout}
+        />
         <main className="app-content">
           <Routes>
             <Route path="/"              element={<Dashboard />} />
@@ -109,6 +115,25 @@ const AppLayout = ({ user, onLogout }) => {
 /* ── Root App ─────────────────────────────────────────────── */
 function AppInner() {
   const [user, setUser] = useState(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    import('./services/api').then(async ({ api }) => {
+      if (!api.hasToken()) {
+        setCheckingSession(false);
+        return;
+      }
+
+      try {
+        const result = await api.getMe();
+        setUser(result.user);
+      } catch {
+        api.clearToken();
+      } finally {
+        setCheckingSession(false);
+      }
+    });
+  }, []);
 
   const handleLogin = (userData) => {
     setUser(userData);
@@ -118,6 +143,10 @@ function AppInner() {
     import('./services/api').then(({ api }) => api.clearToken());
     setUser(null);
   };
+
+  if (checkingSession) {
+    return <div className="app-loading">Loading Scholar Track...</div>;
+  }
 
   if (!user) {
     return <LoginPage onLogin={handleLogin} />;
