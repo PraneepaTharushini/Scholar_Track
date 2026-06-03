@@ -210,136 +210,137 @@ export default function TaskManagement({ tasks, onView, onMarkDone, onDelete }) 
           <span style={{ fontSize: 40 }}>🔍</span>
           <div>No tasks match your filters.</div>
         </div>
-      ) : viewMode === 'table' ? (
-        <div className="tm-table-wrap panel">
-          <table className="tm-table">
-            <thead>
-              <tr>
-                <th>Task</th>
-                <th>Subject</th>
-                <th>Deadline</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(task => {
-                const p = PRIORITY_CONFIG[task.priority];
-                const due = daysUntil(task.deadline);
-                return (
-                  <tr key={task.id} className={task.status === 'completed' ? 'tm-row-done' : ''}>
-                    <td>
-                      <div className="tm-task-cell">
-                        <span className="tm-task-emoji">{getTaskIcon(task.title)}</span>
-                        <div>
-                          <div className="tm-task-name">{task.title}</div>
-                          <div className="tm-task-src">📌 {task.source}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="tm-subject-pill">{task.subject}</span>
-                    </td>
-                    <td>
-                      <div className="tm-date">{formatDate(task.deadline)}</div>
-                      <div className="tm-due-tag" style={{ color: due.color }}>{due.label}</div>
-                    </td>
-                    <td>
-                      <span className="tm-priority-badge" style={{ background: p.bg, color: p.text }}>
-                        {p.icon} {p.label}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`tm-status ${task.status}`}>
-                        {task.status === 'completed' ? '✅ Completed' : '⏳ Pending'}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="tm-action-group">
-                        <button
-                          className="tm-action-btn tm-action-view"
-                          onClick={() => onView(task)}
-                          title="View details"
-                        >
-                          👁 View
-                        </button>
-                        {task.status !== 'completed' && (
-                          <button
-                            className="tm-action-btn tm-action-done"
-                            onClick={(e) => handleMarkDone(e, task)}
-                            title="Mark as done"
-                          >
-                            ✅ Done
-                          </button>
-                        )}
-                        <button
-                          className="tm-action-btn tm-action-delete"
-                          onClick={(e) => handleDeleteClick(e, task.id)}
-                          title="Delete task"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
       ) : (
-        <div className="tm-cards">
-          {filtered.map(task => {
-            const p = PRIORITY_CONFIG[task.priority];
-            const due = daysUntil(task.deadline);
-            return (
-              <div key={task.id} className={`tm-card ${task.status === 'completed' ? 'done' : ''}`}>
-                <div className="tm-card-top">
-                  <span className="tm-card-emoji">{getTaskIcon(task.title)}</span>
-                  <span className="tm-priority-badge" style={{ background: p.bg, color: p.text }}>
-                    {p.icon} {p.label}
-                  </span>
-                </div>
-                <div className="tm-card-title">{task.title}</div>
-                <div className="tm-card-desc">{task.description}</div>
-                <div className="tm-card-meta">
-                  <span className="tm-subject-pill">{task.subject}</span>
-                  <span className="tm-due-tag" style={{ color: due.color }}>📅 {due.label}</span>
-                </div>
-                <div className="tm-card-footer">
-                  <span className={`tm-status ${task.status}`}>
-                    {task.status === 'completed' ? '✅ Completed' : '⏳ Pending'}
-                  </span>
-                  <div className="tm-action-group">
-                    <button
-                      className="tm-action-btn tm-action-view"
-                      onClick={() => onView(task)}
-                      title="View details"
-                    >
-                      👁 View
-                    </button>
-                    {task.status !== 'completed' && (
+        <div className={`tm-view-container tm-view-${viewMode}`}>
+          <div className="tm-table-wrap panel">
+            <table className="tm-table">
+              <thead>
+                <tr>
+                  <th>Task</th>
+                  <th>Subject</th>
+                  <th>Deadline</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(task => {
+                  const p = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.low;
+                  const due = daysUntil(task.deadline);
+                  return (
+                    <tr key={task.id} className={task.status === 'completed' ? 'tm-row-done' : ''}>
+                      <td>
+                        <div className="tm-task-cell">
+                          <span className="tm-task-emoji">{getTaskIcon(task.title)}</span>
+                          <div>
+                            <div className="tm-task-name">{task.title}</div>
+                            <div className="tm-task-src">📌 {task.source}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="tm-subject-pill">{task.subject}</span>
+                      </td>
+                      <td>
+                        <div className="tm-date">{formatDate(task.deadline)}</div>
+                        <div className="tm-due-tag" style={{ color: due.color }}>{due.label}</div>
+                      </td>
+                      <td>
+                        <span className="tm-priority-badge" style={{ background: p.bg, color: p.text }}>
+                          {p.icon} {p.label}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`tm-status ${task.status}`}>
+                          {task.status === 'completed' ? '✅ Completed' : '⏳ Pending'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="tm-action-group">
+                          <button
+                            className="tm-action-btn tm-action-view"
+                            onClick={() => onView(task)}
+                            title="View details"
+                          >
+                            👁 View
+                          </button>
+                          {task.status !== 'completed' && (
+                            <button
+                              className="tm-action-btn tm-action-done"
+                              onClick={(e) => handleMarkDone(e, task)}
+                              title="Mark as done"
+                            >
+                              ✅ Done
+                            </button>
+                          )}
+                          <button
+                            className="tm-action-btn tm-action-delete"
+                            onClick={(e) => handleDeleteClick(e, task.id)}
+                            title="Delete task"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="tm-cards">
+            {filtered.map(task => {
+              const p = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.low;
+              const due = daysUntil(task.deadline);
+              return (
+                <div key={task.id} className={`tm-card ${task.status === 'completed' ? 'done' : ''}`}>
+                  <div className="tm-card-top">
+                    <span className="tm-card-emoji">{getTaskIcon(task.title)}</span>
+                    <span className="tm-priority-badge" style={{ background: p.bg, color: p.text }}>
+                      {p.icon} {p.label}
+                    </span>
+                  </div>
+                  <div className="tm-card-title">{task.title}</div>
+                  <div className="tm-card-desc">{task.description}</div>
+                  <div className="tm-card-meta">
+                    <span className="tm-subject-pill">{task.subject}</span>
+                    <span className="tm-due-tag" style={{ color: due.color }}>📅 {due.label}</span>
+                  </div>
+                  <div className="tm-card-footer">
+                    <span className={`tm-status ${task.status}`}>
+                      {task.status === 'completed' ? '✅ Completed' : '⏳ Pending'}
+                    </span>
+                    <div className="tm-action-group">
                       <button
-                        className="tm-action-btn tm-action-done"
-                        onClick={(e) => handleMarkDone(e, task)}
-                        title="Mark as done"
+                        className="tm-action-btn tm-action-view"
+                        onClick={() => onView(task)}
+                        title="View details"
                       >
-                        ✅ Done
+                        👁 View
                       </button>
-                    )}
-                    <button
-                      className="tm-action-btn tm-action-delete"
-                      onClick={(e) => handleDeleteClick(e, task.id)}
-                      title="Delete task"
-                    >
-                      🗑️
-                    </button>
+                      {task.status !== 'completed' && (
+                        <button
+                          className="tm-action-btn tm-action-done"
+                          onClick={(e) => handleMarkDone(e, task)}
+                          title="Mark as done"
+                        >
+                          ✅ Done
+                        </button>
+                      )}
+                      <button
+                        className="tm-action-btn tm-action-delete"
+                        onClick={(e) => handleDeleteClick(e, task.id)}
+                        title="Delete task"
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 

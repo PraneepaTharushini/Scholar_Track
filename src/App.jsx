@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -32,31 +32,83 @@ const PAGE_TITLES = {
 /* ── Task page with detail view ──────────────────────────── */
 
 function TasksPage() {
-  const [tasks, setTasks] = useState(INITIAL_TASKS);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState(null);
+
+  useEffect(() => {
+    const loadTasks = async () => {
+      try {
+        const { api } = await import('./services/api');
+        const list = await api.getTasks();
+        setTasks(list);
+      } catch (err) {
+        console.error('Failed to load tasks:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadTasks();
+  }, []);
 
   const handleView = (task) => setSelectedTask(task);
   const handleBack = () => setSelectedTask(null);
 
-  // Update task in list and selected view
-  const handleUpdate = (updated) => {
-    setTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
-    setSelectedTask(updated);
+  const handleUpdate = async (updated) => {
+    try {
+      const { api } = await import('./services/api');
+      await api.updateTask(updated.id, {
+        title: updated.title,
+        description: updated.description,
+        deadline: updated.deadline,
+        category: updated.category,
+        status: updated.status,
+        importance_override: updated.importance_override
+      });
+      const freshList = await api.getTasks();
+      setTasks(freshList);
+      
+      const freshSelected = freshList.find(t => t.id === updated.id) || updated;
+      setSelectedTask(freshSelected);
+    } catch (err) {
+      console.error('Failed to update task:', err);
+    }
   };
 
-  // Delete task from list and go back
-  const handleDelete = (id) => {
-    setTasks(prev => prev.filter(t => t.id !== id));
-    setSelectedTask(null);
+  const handleDelete = async (id) => {
+    try {
+      const { api } = await import('./services/api');
+      await api.deleteTask(id);
+      setTasks(prev => prev.filter(t => t.id !== id));
+      setSelectedTask(null);
+    } catch (err) {
+      console.error('Failed to delete task:', err);
+    }
   };
 
-  // Mark a task done directly from the list
-  const handleMarkDone = (id) => {
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, status: 'completed' } : t));
+  const handleMarkDone = async (id) => {
+    try {
+      const { api } = await import('./services/api');
+      await api.updateTask(id, { status: 'completed' });
+      const freshList = await api.getTasks();
+      setTasks(freshList);
+    } catch (err) {
+      console.error('Failed to mark task done:', err);
+    }
   };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-muted)' }}>
+        <div className="tm-empty">
+          <span style={{ fontSize: 40, display: 'inline-block', animation: 'spin 2s linear infinite' }}>⏳</span>
+          <div>Loading tasks from database...</div>
+        </div>
+      </div>
+    );
+  }
 
   if (selectedTask) {
-    // keep selected task in sync with list
     const freshTask = tasks.find(t => t.id === selectedTask.id) || selectedTask;
     return (
       <TaskDetail
@@ -82,12 +134,25 @@ const AppLayout = ({ user, onLogout }) => {
   const location = useLocation();
   const title = PAGE_TITLES[location.pathname] || 'Scholar Track';
   const { theme, toggleTheme } = useTheme();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Close sidebar on path changes
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
 
   return (
     <div className="app-layout">
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="app-main">
-        <Header title={title} user={user?.name || 'Student'} theme={theme} onToggleTheme={toggleTheme} />
+        <Header 
+          title={title} 
+          user={user?.name || 'Student'} 
+          theme={theme} 
+          onToggleTheme={toggleTheme} 
+          onLogout={onLogout} 
+          onToggleSidebar={() => setSidebarOpen(o => !o)} 
+        />
         <main className="app-content">
           <Routes>
             <Route path="/"              element={<Dashboard />} />
@@ -109,6 +174,24 @@ const AppLayout = ({ user, onLogout }) => {
 /* ── Root App ─────────────────────────────────────────────── */
 function AppInner() {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { api } = await import('./services/api');
+        if (api.hasToken()) {
+          const res = await api.getMe();
+          setUser(res.user);
+        }
+      } catch (err) {
+        console.error('Session check failed:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkSession();
+  }, []);
 
   const handleLogin = (userData) => {
     setUser(userData);
@@ -118,6 +201,17 @@ function AppInner() {
     import('./services/api').then(({ api }) => api.clearToken());
     setUser(null);
   };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-root, #0a0a0f)', color: 'var(--text-primary, #ffffff)' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 48, marginBottom: 16, display: 'inline-block', animation: 'spin 2s linear infinite' }}>⏳</div>
+          <div style={{ fontSize: 16, fontWeight: 500 }}>Initializing Scholar Track...</div>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return <LoginPage onLogin={handleLogin} />;

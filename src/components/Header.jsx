@@ -2,13 +2,18 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Header.css';
 
-const Header = ({ title, user = 'Sarah', theme = 'light', onToggleTheme }) => {
+const Header = ({ title, user = 'Sarah', theme = 'light', onToggleTheme, onLogout, onToggleSidebar }) => {
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
 
   return (
     <header className="header">
       <div className="header__left">
+        <button className="header__menu-btn" onClick={onToggleSidebar} aria-label="Open sidebar">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        </button>
         <h1 className="header__title">{title}</h1>
       </div>
 
@@ -80,7 +85,10 @@ const Header = ({ title, user = 'Sarah', theme = 'light', onToggleTheme }) => {
               <div className="header__drop-divider" />
               <button
                 className="header__drop-item danger"
-                onClick={() => window.location.reload()}
+                onClick={() => {
+                  if (onLogout) onLogout();
+                  setProfileOpen(false);
+                }}
               >
                 <span>🚪</span> Sign Out
               </button>

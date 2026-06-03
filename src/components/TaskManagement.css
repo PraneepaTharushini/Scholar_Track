@@ -478,6 +478,14 @@
 
 .tm-modal-btn-delete:hover { opacity: 0.88; }
 
+/* ── View container desktop toggles ── */
+.tm-view-table .tm-cards {
+  display: none;
+}
+.tm-view-cards .tm-table-wrap {
+  display: none;
+}
+
 /* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 1100px) {
   .tm-summary { grid-template-columns: repeat(2, 1fr); }
@@ -493,11 +501,14 @@
 
 @media (max-width: 700px) {
   /* Switch table to stacked cards on small screens */
-  .tm-table-wrap { display: none; }
+  .tm-table-wrap { display: none !important; }
   .tm-summary { grid-template-columns: repeat(2, 1fr); }
 
   /* Always show card view on mobile regardless of toggle */
-  .tm-cards { grid-template-columns: 1fr; }
+  .tm-cards { display: grid !important; grid-template-columns: 1fr !important; }
+  
+  /* Hide desktop view toggle on mobile */
+  .tm-view-toggle { display: none; }
 }
 
 @media (max-width: 480px) {
