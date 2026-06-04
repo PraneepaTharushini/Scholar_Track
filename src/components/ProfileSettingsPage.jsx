@@ -1,6 +1,18 @@
 import { useState } from "react";
 import "../global.css";
 
+const Field = ({ label, name, type = "text", form, setForm }) => (
+  <div className="field">
+    <label className="field-label">{label}</label>
+    <input
+      className="field-input"
+      type={type}
+      value={form[name]}
+      onChange={(e) => setForm({ ...form, [name]: e.target.value })}
+    />
+  </div>
+);
+
 // ─── PROFILE PAGE ─────────────────────────────────────────────────────────────
 function ProfilePage() {
   const [form, setForm] = useState({
@@ -19,18 +31,6 @@ function ProfilePage() {
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
-
-  const Field = ({ label, name, type = "text" }) => (
-    <div className="field">
-      <label className="field-label">{label}</label>
-      <input
-        className="field-input"
-        type={type}
-        value={form[name]}
-        onChange={(e) => setForm({ ...form, [name]: e.target.value })}
-      />
-    </div>
-  );
 
   return (
     <div className="profile-page">
@@ -60,12 +60,12 @@ function ProfilePage() {
       <div className="card">
         <h3 className="card-title">Personal Information</h3>
         <div className="grid-2">
-          <Field label="First Name"   name="firstName" />
-          <Field label="Last Name"    name="lastName" />
-          <Field label="Email Address" name="email" type="email" />
-          <Field label="Student ID"   name="studentId" />
-          <Field label="University / Institution" name="university" />
-          <Field label="Major / Program" name="major" />
+          <Field label="First Name"   name="firstName" form={form} setForm={setForm} />
+          <Field label="Last Name"    name="lastName" form={form} setForm={setForm} />
+          <Field label="Email Address" name="email" type="email" form={form} setForm={setForm} />
+          <Field label="Student ID"   name="studentId" form={form} setForm={setForm} />
+          <Field label="University / Institution" name="university" form={form} setForm={setForm} />
+          <Field label="Major / Program" name="major" form={form} setForm={setForm} />
         </div>
 
         <div className="field">
@@ -114,31 +114,31 @@ function ProfilePage() {
   );
 }
 
+const Toggle = ({ val, onChange }) => (
+  <div
+    className="toggle"
+    style={{ backgroundColor: val ? "#6c63ff" : "#e2e8f0" }}
+    onClick={() => onChange(!val)}
+  >
+    <div className="toggle-thumb" style={{ transform: val ? "translateX(20px)" : "translateX(2px)" }} />
+  </div>
+);
+
+const Row = ({ label, sub, val, onChange }) => (
+  <div className="settings-row">
+    <div>
+      <div className="settings-row-label">{label}</div>
+      {sub && <div className="settings-row-sub">{sub}</div>}
+    </div>
+    <Toggle val={val} onChange={onChange} />
+  </div>
+);
+
 // ─── SETTINGS PAGE ────────────────────────────────────────────────────────────
 function SettingsPage() {
   const [notif, setNotif] = useState({ email: true, push: false, deadlineReminder: true, weeklyDigest: false });
   const [prefs, setPrefs] = useState({ theme: "Light", language: "English", timezone: "UTC+5:30", dateFormat: "MM/DD/YYYY" });
   const [privacy, setPrivacy] = useState({ shareAnalytics: true, publicProfile: false });
-
-  const Toggle = ({ val, onChange }) => (
-    <div
-      className="toggle"
-      style={{ backgroundColor: val ? "#6c63ff" : "#e2e8f0" }}
-      onClick={() => onChange(!val)}
-    >
-      <div className="toggle-thumb" style={{ transform: val ? "translateX(20px)" : "translateX(2px)" }} />
-    </div>
-  );
-
-  const Row = ({ label, sub, val, onChange }) => (
-    <div className="settings-row">
-      <div>
-        <div className="settings-row-label">{label}</div>
-        {sub && <div className="settings-row-sub">{sub}</div>}
-      </div>
-      <Toggle val={val} onChange={onChange} />
-    </div>
-  );
 
   return (
     <div className="settings-page">
