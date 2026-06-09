@@ -24,6 +24,11 @@
 
 @media (max-width: 768px) {
   .app-main { margin-left: 0; }
+  .app-content { padding: 16px; }
+}
+
+@media (max-width: 480px) {
+  .app-content { padding: 12px; }
 }
 
 /* ── Shared panel card ─────────────────────────────────────── */

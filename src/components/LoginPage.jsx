@@ -1,18 +1,40 @@
 import { useState } from "react";
 import "../global.css";
+import { api } from "../services/api";
 
 export default function LoginPage({ onLogin }) {
+  const [mode, setMode] = useState("login"); // 'login' | 'register'
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError("");
     if (!email || !password) { setError("Please fill in all fields."); return; }
+    if (mode === "register" && !name) { setError("Please enter your name."); return; }
+
     setIsLoading(true);
-    setTimeout(() => { setIsLoading(false); if (onLogin) onLogin(); }, 1500);
+    try {
+      let result;
+      if (mode === "login") {
+        result = await api.login(email, password);
+      } else {
+        result = await api.register(name, email, password);
+      }
+      api.setToken(result.token);
+      if (onLogin) onLogin(result.user);
+    } catch (err) {
+      setError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") handleSubmit();
   };
 
   return (
@@ -30,12 +52,12 @@ export default function LoginPage({ onLogin }) {
           <div>
             <h1 className="login-hero-heading">Your Academic<br />Journey, Organized.</h1>
             <p className="login-hero-sub">
-              Upload syllabi, extract tasks automatically, and stay on top of every deadline — all in one place.
+              Track tasks, review extracted assignments, and stay on top of every deadline — all in one place.
             </p>
           </div>
 
           <div className="login-features">
-            {["OCR + NLP task extraction", "Smart deadline tracking", "Analytics & progress insights"].map((f, i) => (
+            {["Smart deadline tracking", "Analytics & progress insights", "Review & manage tasks"].map((f, i) => (
               <div key={i} className="login-feature-item">
                 <div className="login-feature-dot" />
                 <span className="login-feature-text">{f}</span>
@@ -52,11 +74,35 @@ export default function LoginPage({ onLogin }) {
         <div className="login-form-card">
 
           <div>
-            <h2 className="login-form-title">Welcome back</h2>
-            <p className="login-form-sub">Sign in to your student account</p>
+            <h2 className="login-form-title">
+              {mode === "login" ? "Welcome back" : "Create an account"}
+            </h2>
+            <p className="login-form-sub">
+              {mode === "login"
+                ? "Sign in to your student account"
+                : "Join Scholar Track for free"}
+            </p>
           </div>
 
           {error && <div className="login-error">{error}</div>}
+
+          {/* Name — register only */}
+          {mode === "register" && (
+            <div className="field">
+              <label className="field-label">Full Name</label>
+              <div className="login-input-wrap">
+                <span className="login-input-icon">👤</span>
+                <input
+                  className="login-input"
+                  type="text"
+                  placeholder="Your full name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Email */}
           <div className="field">
@@ -69,6 +115,7 @@ export default function LoginPage({ onLogin }) {
                 placeholder="student@university.edu"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={handleKeyDown}
               />
             </div>
           </div>
@@ -77,16 +124,19 @@ export default function LoginPage({ onLogin }) {
           <div className="field">
             <div className="login-label-row">
               <label className="field-label">Password</label>
-              <span className="login-link">Forgot password?</span>
+              {mode === "login" && (
+                <span className="login-link">Forgot password?</span>
+              )}
             </div>
             <div className="login-input-wrap">
               <span className="login-input-icon">🔒</span>
               <input
                 className="login-input"
                 type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
+                placeholder={mode === "register" ? "At least 6 characters" : "Enter your password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={handleKeyDown}
               />
               <span className="login-eye-btn" onClick={() => setShowPassword(!showPassword)}>
                 {showPassword ? "🙈" : "👁"}
@@ -94,29 +144,26 @@ export default function LoginPage({ onLogin }) {
             </div>
           </div>
 
-          <label className="login-check-label">
-            <input type="checkbox" style={{ accentColor: "#6c63ff" }} />
-            Remember me for 30 days
-          </label>
-
           <button className="login-btn" onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? "Signing in…" : "Sign In"}
+            {isLoading
+              ? (mode === "login" ? "Signing in…" : "Creating account…")
+              : (mode === "login" ? "Sign In" : "Create Account")}
           </button>
 
-          <div className="login-divider">
-            <div className="login-divider-line" />
-            <span className="login-divider-text">or continue with</span>
-            <div className="login-divider-line" />
-          </div>
-
-          <div className="login-social-row">
-            {["Google", "Microsoft"].map((p) => (
-              <button key={p} className="login-social-btn">{p}</button>
-            ))}
-          </div>
-
-          <p className="login-signup-text">
-            Don't have an account? <span className="login-link">Create one free</span>
+          <p className="login-signup-text" style={{ textAlign: "center", marginTop: "1rem" }}>
+            {mode === "login" ? (
+              <>Don't have an account?{" "}
+                <span className="login-link" onClick={() => { setMode("register"); setError(""); }}>
+                  Create one free
+                </span>
+              </>
+            ) : (
+              <>Already have an account?{" "}
+                <span className="login-link" onClick={() => { setMode("login"); setError(""); }}>
+                  Sign in
+                </span>
+              </>
+            )}
           </p>
 
         </div>
