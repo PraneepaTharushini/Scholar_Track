@@ -121,13 +121,10 @@ function SettingsPage() {
   const [privacy, setPrivacy] = useState({ shareAnalytics: true, publicProfile: false });
 
   const Toggle = ({ val, onChange }) => (
-    <div
-      className="toggle"
-      style={{ backgroundColor: val ? "#6c63ff" : "#e2e8f0" }}
+    <button
+      className={`settings-toggle${val ? " on" : ""}`}
       onClick={() => onChange(!val)}
-    >
-      <div className="toggle-thumb" style={{ transform: val ? "translateX(20px)" : "translateX(2px)" }} />
-    </div>
+    />
   );
 
   const Row = ({ label, sub, val, onChange }) => (

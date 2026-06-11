@@ -601,25 +601,38 @@ body {
 .settings-row-label { font-size: 14px; font-weight: 600; color: var(--text-main); }
 .settings-row-sub { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
 
-.toggle {
+.settings-toggle {
   width: 44px;
   height: 24px;
   border-radius: 12px;
+  background: #d1d5db;
   cursor: pointer;
   position: relative;
-  transition: background-color 0.2s;
+  transition: background 0.25s;
   flex-shrink: 0;
+  border: none;
+  outline: none;
 }
 
-.toggle-thumb {
+.settings-toggle.on {
+  background: #6366f1;
+}
+
+.settings-toggle::after {
+  content: '';
   position: absolute;
-  top: 2px;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
+  background: #fff;
   border-radius: 50%;
-  background-color: var(--white);
-  transition: transform 0.2s;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  top: 3px;
+  left: 3px;
+  transition: left 0.25s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.settings-toggle.on::after {
+  left: 23px;
 }
 
 .slider-wrap { display: flex; align-items: center; gap: 12px; }
