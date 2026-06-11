@@ -626,21 +626,29 @@ body {
 .settings-row-label { font-size: 14px; font-weight: 600; color: var(--text-primary); }
 .settings-row-sub { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
 
-.toggle {
+.settings-toggle {
   width: 44px;
   height: 24px;
   border-radius: 12px;
+  background: #d1d5db;
   cursor: pointer;
   position: relative;
-  transition: background-color 0.2s;
+  transition: background 0.25s;
   flex-shrink: 0;
+  border: none;
+  outline: none;
 }
 
-.toggle-thumb {
+.settings-toggle.on {
+  background: #6366f1;
+}
+
+.settings-toggle::after {
+  content: '';
   position: absolute;
-  top: 2px;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
+  background: #fff;
   border-radius: 50%;
   background-color: #ffffff;
   transition: transform 0.2s;
