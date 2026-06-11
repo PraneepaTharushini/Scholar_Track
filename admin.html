@@ -80,6 +80,20 @@
     .btn-primary{background:#6366f1;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer}
     .btn-primary:hover{background:#4f46e5}
     @media(max-width:1000px){.two-col{grid-template-columns:1fr}.stat-grid{grid-template-columns:repeat(2,1fr)}}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;display:flex;align-items:center;justify-content:center}
+    .modal-box{background:#fff;border-radius:16px;padding:28px 32px;width:420px;box-shadow:0 20px 60px rgba(0,0,0,.25);z-index:1000}
+    .modal-title{font-size:18px;font-weight:700;color:#1a1a3e;margin-bottom:20px}
+    .form-group{margin-bottom:16px}
+    .form-label{display:block;font-size:12px;font-weight:600;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+    .form-input{width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:9px 12px;font-size:13.5px;outline:none;font-family:inherit;transition:border .2s}
+    .form-input:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+    .form-select{width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:9px 12px;font-size:13.5px;outline:none;font-family:inherit;background:#fff}
+    .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}
+    .btn-cancel{background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer}
+    .btn-cancel:hover{background:#e5e7eb}
+    .btn-save{background:#6366f1;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer}
+    .btn-save:hover{background:#4f46e5}
+    .form-error{color:#ef4444;font-size:12px;margin-top:16px;text-align:center;font-weight:500}
   </style>
 </head>
 <body>
@@ -99,44 +113,12 @@ const navItems = [
   { icon:'⚙️', label:'Settings', href:'index.html' },
 ];
 
-const initialUsers = [
-  { id:'USR001', name:'Sarah Johnson', email:'sarah.johnson@gmail.com', joined:'Jan 15, 2026', role:'Student', tasks:47, docs:12, status:'Active' },
-  { id:'USR002', name:'Michael Chen', email:'michael.chen@gmail.com', joined:'Feb 03, 2026', role:'Student', tasks:31, docs:8, status:'Active' },
-  { id:'USR003', name:'Emma Rodriguez', email:'emma.rodriguez@gmail.com', joined:'Mar 10, 2026', role:'Student', tasks:55, docs:14, status:'Active' },
-  { id:'USR004', name:'James Wilson', email:'james.wilson@gmail.com', joined:'Mar 22, 2026', role:'Student', tasks:9, docs:3, status:'Inactive' },
-  { id:'USR005', name:'Priya Sharma', email:'priya.sharma@gmail.com', joined:'Apr 01, 2026', role:'Student', tasks:22, docs:6, status:'Active' },
-];
-
-const ocrStats = [
-  { type:'PDF Documents', processed:1247, success:'96.2%', avgTime:'2.3s', status:'Optimal' },
-  { type:'Images (PNG/JPG)', processed:856, success:'92.8%', avgTime:'1.8s', status:'Optimal' },
-  { type:'Email Screenshots', processed:743, success:'94.5%', avgTime:'2.1s', status:'Optimal' },
-  { type:'Syllabi / DOCX', processed:621, success:'89.3%', avgTime:'3.5s', status:'Optimal' },
-];
-
-const modules = [
-  { num:1, name:'User Management & Authentication', member:'C. Thinushanth', role:'Frontend + Backend' },
-  { num:2, name:'Document Upload & Data Extraction', member:'A.J.M.S. Ayodya', role:'Backend + OCR/NLP' },
-  { num:3, name:'Create & Manage Academic Tasks', member:'H.M.G.D. Bandara', role:'Frontend + Backend' },
-  { num:4, name:'Priority Analysis & Recommendation', member:'Y.M.P. Tharushini', role:'Backend + ML/Logic' },
-  { num:5, name:'Present Info & Send Reminders', member:'W.M.A.B. Wanasinghe', role:'Frontend + Notification UI' },
-];
-
-const logs = [
-  { msg:'Database backup completed successfully', time:'2 hrs ago', color:'#10b981' },
-  { msg:'New user registered: priya.sharma@gmail.com', time:'4 hrs ago', color:'#6366f1' },
-  { msg:'OCR service processed 23 documents', time:'5 hrs ago', color:'#10b981' },
-  { msg:'NLP models updated to v2.1.0', time:'12 hrs ago', color:'#10b981' },
-  { msg:'ML priority engine recalibrated', time:'1 day ago', color:'#f59e0b' },
-  { msg:'User authentication system verified', time:'1 day ago', color:'#10b981' },
-  { msg:'Security patches applied (CVE-2026-xxx)', time:'2 days ago', color:'#10b981' },
-  { msg:'Email SMTP connection tested OK', time:'2 days ago', color:'#10b981' },
-];
-
 function StatusPill({ s }) {
-  const cls = s === 'Active' || s === 'Optimal' ? 'green' : s === 'Inactive' ? 'red' : 'amber';
-  const dot = s === 'Active' || s === 'Optimal' ? '#10b981' : s === 'Inactive' ? '#ef4444' : '#f59e0b';
-  return <span className={`pill ${cls}`}><span className="dot" style={{background:dot}}/>{s}</span>;
+  const norm = (s || '').toLowerCase();
+  const cls = norm === 'active' || norm === 'optimal' ? 'green' : norm === 'inactive' ? 'red' : 'amber';
+  const dot = norm === 'active' || norm === 'optimal' ? '#10b981' : norm === 'inactive' ? '#ef4444' : '#f59e0b';
+  const label = s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s;
+  return <span className={`pill ${cls}`}><span className="dot" style={{background:dot}}/>{label}</span>;
 }
 
 function MetricBar({ pct, color }) {
@@ -147,34 +129,194 @@ function MetricBar({ pct, color }) {
   );
 }
 
+function UserModal({ user, onClose, onSaved }) {
+  const isEdit = !!user;
+  // Normalize role & status to Title Case so they match <option> values
+  const normalizeRole = r => {
+    const map = { student:'Student', admin:'Admin', instructor:'Instructor' };
+    return map[(r||'').toLowerCase()] || r || 'Student';
+  };
+  const normalizeStatus = s => {
+    const map = { active:'Active', inactive:'Inactive' };
+    return map[(s||'').toLowerCase()] || s || 'Active';
+  };
+  const [form, setForm] = useState({
+    name:   user?.name   || '',
+    email:  user?.email  || '',
+    role:   normalizeRole(user?.role),
+    status: normalizeStatus(user?.status),
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleChange = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+
+  const handleSubmit = async () => {
+    if (!form.name.trim() || !form.email.trim()) {
+      setError('Name and email are required.'); return;
+    }
+    setSaving(true); setError('');
+    try {
+      const url = isEdit
+        ? `http://localhost:3000/api/users/${user.id}`
+        : 'http://localhost:3000/api/users';
+      const method = isEdit ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Something went wrong.'); setSaving(false); return; }
+      onSaved(data, isEdit);
+      onClose();
+    } catch (e) {
+      setError('Could not reach the server. Is Flask running?');
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <div className="modal-title">{isEdit ? '✏️ Edit User' : '➕ Add New User'}</div>
+        <div className="form-group">
+          <label className="form-label">Full Name</label>
+          <input className="form-input" name="name" value={form.name} onChange={handleChange} placeholder="e.g. Sarah Johnson" />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Email Address</label>
+          <input className="form-input" name="email" value={form.email} onChange={handleChange} placeholder="e.g. sarah@university.edu" />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Role</label>
+          <select className="form-select" name="role" value={form.role} onChange={handleChange}>
+            <option>Student</option>
+            <option>Admin</option>
+            <option>Instructor</option>
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Status</label>
+          <select className="form-select" name="status" value={form.status} onChange={handleChange}>
+            <option>Active</option>
+            <option>Inactive</option>
+          </select>
+        </div>
+        {error && <div className="form-error">⚠️ {error}</div>}
+        <div className="modal-actions">
+          <button className="btn-cancel" onClick={onClose}>Cancel</button>
+          <button className="btn-save" onClick={handleSubmit} disabled={saving}>
+            {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add User'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [tab, setTab] = useState('users');
-  const [users, setUsers] = useState(initialUsers);
   const [search, setSearch] = useState('');
-  const [cpu, setCpu] = useState(34);
-  const [mem, setMem] = useState(35);
+  const [loading, setLoading] = useState(true);
+  const [modalUser, setModalUser] = useState(undefined); // undefined=closed, null=add, obj=edit
 
-  // Simulated live metrics
+  // State for data
+  const [users, setUsers] = useState([]);
+  const [summary, setSummary] = useState({ total_users:0, active_users:0, tasks_created:0, docs_processed:0 });
+  const [systemHealth, setSystemHealth] = useState({ services:[], version:[] });
+  const [metrics, setMetrics] = useState({ cpu_pct:0, memory_pct:0, storage_pct:0, ocr_queue_pct:0, response_ms:0, uptime_pct:0, db_size_gb:0, active_sessions:0 });
+  const [ocrStats, setOcrStats] = useState([]);
+  const [modules, setModules] = useState([]);
+  const [logs, setLogs] = useState([]);
+
   useEffect(() => {
-    const t = setInterval(() => {
-      setCpu(v => Math.min(90, Math.max(15, v + (Math.random()*6-3))));
-      setMem(v => Math.min(80, Math.max(25, v + (Math.random()*4-2))));
-    }, 2000);
-    return () => clearInterval(t);
+    async function fetchAll() {
+      try {
+        const [usersRes, summaryRes, healthRes, metricsRes, ocrRes, modRes, logsRes] = await Promise.all([
+          fetch('http://localhost:3000/api/users').then(r=>r.json()),
+          fetch('http://localhost:3000/api/users/stats').then(r=>r.json()),
+          fetch('http://localhost:3000/api/system/health').then(r=>r.json()),
+          fetch('http://localhost:3000/api/system/metrics').then(r=>r.json()),
+          fetch('http://localhost:3000/api/system/ocr-stats').then(r=>r.json()),
+          fetch('http://localhost:3000/api/system/modules').then(r=>r.json()),
+          fetch('http://localhost:3000/api/activity-logs').then(r=>r.json()),
+        ]);
+        setUsers(usersRes);
+        setSummary({ total_users: summaryRes.total_users||0, active_users: summaryRes.active_users||0, tasks_created: summaryRes.tasks_created||0, docs_processed: 3467 });
+        setSystemHealth(healthRes);
+        setMetrics(metricsRes);
+        setOcrStats(ocrRes);
+        setModules(modRes);
+        setLogs(logsRes);
+      } catch (err) {
+        console.error('Failed to load admin data', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchAll();
   }, []);
 
+  useEffect(() => {
+    if (loading) return;
+    const t = setInterval(() => {
+      setMetrics(prev => ({
+        ...prev,
+        cpu_pct: Math.min(90, Math.max(15, prev.cpu_pct + (Math.random()*6-3))),
+        memory_pct: Math.min(80, Math.max(25, prev.memory_pct + (Math.random()*4-2)))
+      }));
+    }, 2000);
+    return () => clearInterval(t);
+  }, [loading]);
+
   const filtered = users.filter(u =>
-    u.name.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase())
+    (u.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (u.email || '').toLowerCase().includes(search.toLowerCase())
   );
 
-  const deleteUser = id => setUsers(u => u.filter(x => x.id !== id));
-  const toggleStatus = id => setUsers(u => u.map(x => x.id===id ? {...x, status: x.status==='Active'?'Inactive':'Active'} : x));
+  const handleSaved = (savedUser, isEdit) => {
+    // Ensure all display fields are present with defaults
+    const normalized = {
+      task_count: 0,
+      doc_count: 0,
+      ...savedUser,
+      user_code: savedUser.user_code || ('ST-' + String(savedUser.id).padStart(3, '0')),
+    };
+    if (isEdit) {
+      setUsers(us => us.map(u => u.id === normalized.id ? { ...u, ...normalized } : u));
+    } else {
+      setUsers(us => [...us, normalized]);
+    }
+  };
 
-  const activeCount = users.filter(u=>u.status==='Active').length;
+  const deleteUser = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    await fetch(`http://localhost:3000/api/users/${id}`, { method: 'DELETE' });
+    setUsers(u => u.filter(x => x.id !== id));
+  };
+
+  const toggleStatus = async (id, currentStatus) => {
+    const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
+    const res = await fetch(`http://localhost:3000/api/users/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    });
+    if (res.ok) setUsers(u => u.map(x => x.id===id ? {...x, status: newStatus} : x));
+  };
+
+  if (loading) return <div style={{padding: 40, textAlign:'center'}}>Loading...</div>;
 
   return (
     <>
+      {modalUser !== undefined && (
+        <UserModal
+          user={modalUser}
+          onClose={() => setModalUser(undefined)}
+          onSaved={handleSaved}
+        />
+      )}
       <div className="sidebar">
         <div className="logo">
           <div className="logo-icon">✓</div>
@@ -206,10 +348,10 @@ function App() {
           {/* Stats */}
           <div className="stat-grid">
             {[
-              {label:'Total Students',num:users.length,icon:'👥',bg:'linear-gradient(135deg,#6366f1,#8b5cf6)'},
-              {label:'Active Users',num:activeCount,icon:'✅',bg:'linear-gradient(135deg,#10b981,#059669)'},
-              {label:'Tasks Created',num:'12,563',icon:'📝',bg:'linear-gradient(135deg,#f59e0b,#d97706)'},
-              {label:'Docs Processed',num:'3,467',icon:'📄',bg:'linear-gradient(135deg,#ef4444,#dc2626)'},
+              {label:'Total Students',num:summary.total_users,icon:'👥',bg:'linear-gradient(135deg,#6366f1,#8b5cf6)'},
+              {label:'Active Users',num:summary.active_users,icon:'✅',bg:'linear-gradient(135deg,#10b981,#059669)'},
+              {label:'Tasks Created',num:summary.tasks_created,icon:'📝',bg:'linear-gradient(135deg,#f59e0b,#d97706)'},
+              {label:'Docs Processed',num:summary.docs_processed.toLocaleString(),icon:'📄',bg:'linear-gradient(135deg,#ef4444,#dc2626)'},
             ].map(s=>(
               <div key={s.label} className="stat-card" style={{background:s.bg}}>
                 <div className="stat-icon">{s.icon}</div>
@@ -233,7 +375,7 @@ function App() {
             <div className="panel">
               <div className="panel-header">
                 <div className="panel-title">👥 Student Account Management</div>
-                <button className="btn-primary">+ Add User</button>
+                <button className="btn-primary" onClick={() => setModalUser(null)}>+ Add User</button>
               </div>
               <div className="search-bar">
                 <span>🔍</span>
@@ -250,16 +392,16 @@ function App() {
                   <tbody>
                     {filtered.map(u=>(
                       <tr key={u.id}>
-                        <td style={{color:'#6b7280',fontFamily:'monospace'}}>{u.id}</td>
+                        <td style={{color:'#6b7280',fontFamily:'monospace'}}>{u.user_code}</td>
                         <td style={{fontWeight:600}}>{u.name}</td>
                         <td style={{color:'#6b7280'}}>{u.email}</td>
-                        <td>{u.joined}</td>
-                        <td><span className="pill blue">{u.tasks}</span></td>
-                        <td>{u.docs}</td>
+                        <td>{u.joined_date}</td>
+                        <td><span className="pill blue">{u.task_count || 0}</span></td>
+                        <td>{u.doc_count || 0}</td>
                         <td><StatusPill s={u.status}/></td>
                         <td>
-                          <button className="btn-xs edit">Edit</button>
-                          <button className="btn-xs suspend" onClick={()=>toggleStatus(u.id)}>{u.status==='Active'?'Suspend':'Restore'}</button>
+                          <button className="btn-xs edit" onClick={() => setModalUser(u)}>Edit</button>
+                          <button className="btn-xs suspend" onClick={()=>toggleStatus(u.id, u.status)}>{u.status==='Active'?'Suspend':'Restore'}</button>
                           <button className="btn-xs del" onClick={()=>deleteUser(u.id)}>Delete</button>
                         </td>
                       </tr>
@@ -279,33 +421,17 @@ function App() {
               <div>
                 <div className="panel">
                   <div className="panel-header"><div className="panel-title">🖥️ Service Status</div></div>
-                  {[
-                    {label:'MySQL Database',val:'Online',color:'#10b981'},
-                    {label:'Flask API Server',val:'Operational',color:'#10b981'},
-                    {label:'OCR Engine (Tesseract)',val:'Running',color:'#10b981'},
-                    {label:'NLP Pipeline (spaCy)',val:'Operational',color:'#10b981'},
-                    {label:'ML Priority Engine',val:'Running',color:'#10b981'},
-                    {label:'Gmail SMTP',val:'Connected',color:'#10b981'},
-                    {label:'Frontend (React)',val:'Serving',color:'#10b981'},
-                  ].map(s=>(
+                  {systemHealth.services.map(s=>(
                     <div className="info-row" key={s.label}>
                       <span className="info-lbl">{s.label}</span>
-                      <span className="pill green"><span className="dot" style={{background:s.color}}/>{s.val}</span>
+                      <span className="pill green" style={s.val==='Offline'?{background:'#fee2e2',color:'#b91c1c'}:{}}><span className="dot" style={{background:s.color}}/>{s.val}</span>
                     </div>
                   ))}
                 </div>
 
                 <div className="panel">
                   <div className="panel-header"><div className="panel-title">🔐 Version & Build</div></div>
-                  {[
-                    {l:'Application Version',v:'v1.0.0'},
-                    {l:'Build Number',v:'#2026-0421'},
-                    {l:'Last Deployed',v:'Apr 18, 2026'},
-                    {l:'Flask API Version',v:'v2.1.0'},
-                    {l:'React Version',v:'18.x'},
-                    {l:'Database',v:'MySQL 8.0 (Community)'},
-                    {l:'Hosting',v:'Render (Free Tier)'},
-                  ].map(r=>(
+                  {systemHealth.version.map(r=>(
                     <div className="info-row" key={r.l}>
                       <span className="info-lbl">{r.l}</span>
                       <span className="info-val">{r.v}</span>
@@ -319,10 +445,10 @@ function App() {
                   <div className="panel-header"><div className="panel-title">📊 Live Metrics</div></div>
                   <div style={{padding:'16px 20px'}}>
                     {[
-                      {label:'CPU Usage',val:Math.round(cpu),unit:'%',color:'#6366f1'},
-                      {label:'Memory Usage',val:Math.round(mem),unit:'%',color:'#8b5cf6'},
-                      {label:'Storage Used',val:52,unit:'%',color:'#f59e0b'},
-                      {label:'OCR Queue',val:8,unit:'%',color:'#10b981'},
+                      {label:'CPU Usage',val:Math.round(metrics.cpu_pct),unit:'%',color:'#6366f1'},
+                      {label:'Memory Usage',val:Math.round(metrics.memory_pct),unit:'%',color:'#8b5cf6'},
+                      {label:'Storage Used',val:metrics.storage_pct,unit:'%',color:'#f59e0b'},
+                      {label:'OCR Queue',val:metrics.ocr_queue_pct,unit:'%',color:'#10b981'},
                     ].map(m=>(
                       <div key={m.label} style={{marginBottom:18}}>
                         <div style={{display:'flex',justifyContent:'space-between',fontSize:13,marginBottom:6}}>
@@ -333,10 +459,10 @@ function App() {
                       </div>
                     ))}
                   </div>
-                  <div className="info-row"><span className="info-lbl">Server Response</span><span className="info-val">245ms</span></div>
-                  <div className="info-row"><span className="info-lbl">Uptime</span><span className="info-val" style={{color:'#10b981'}}>98.5% (30 days)</span></div>
-                  <div className="info-row"><span className="info-lbl">Database Size</span><span className="info-val">4.2 GB</span></div>
-                  <div className="info-row"><span className="info-lbl">Active Sessions</span><span className="info-val">127</span></div>
+                  <div className="info-row"><span className="info-lbl">Server Response</span><span className="info-val">{metrics.response_ms}ms</span></div>
+                  <div className="info-row"><span className="info-lbl">Uptime</span><span className="info-val" style={{color:'#10b981'}}>{metrics.uptime_pct}% (30 days)</span></div>
+                  <div className="info-row"><span className="info-lbl">Database Size</span><span className="info-val">{metrics.db_size_gb} GB</span></div>
+                  <div className="info-row"><span className="info-lbl">Active Sessions</span><span className="info-val">{metrics.active_sessions}</span></div>
                 </div>
               </div>
             </div>
@@ -353,14 +479,14 @@ function App() {
                   </thead>
                   <tbody>
                     {ocrStats.map(r=>(
-                      <tr key={r.type}>
-                        <td style={{fontWeight:600}}>{r.type}</td>
-                        <td>{r.processed.toLocaleString()}</td>
+                      <tr key={r.doc_type}>
+                        <td style={{fontWeight:600}}>{r.doc_type}</td>
+                        <td>{parseInt(r.processed).toLocaleString()}</td>
                         <td>
-                          <div>{r.success}</div>
-                          <MetricBar pct={parseFloat(r.success)} color="#10b981"/>
+                          <div>{r.success_rate}%</div>
+                          <MetricBar pct={parseFloat(r.success_rate)} color="#10b981"/>
                         </td>
-                        <td>{r.avgTime}</td>
+                        <td>{r.avg_time_sec}s</td>
                         <td><StatusPill s={r.status}/></td>
                       </tr>
                     ))}
@@ -369,9 +495,9 @@ function App() {
               </div>
               <div style={{padding:'16px 20px',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,borderTop:'1px solid #f3f4f6',marginTop:4}}>
                 {[
-                  {label:'Total Processed',val:'3,467',icon:'📄'},
+                  {label:'Total Processed',val:summary.docs_processed.toLocaleString(),icon:'📄'},
                   {label:'Overall Success',val:'93.2%',icon:'✅'},
-                  {label:'Tasks Extracted',val:'12,563',icon:'📝'},
+                  {label:'Tasks Extracted',val:summary.tasks_created.toLocaleString(),icon:'📝'},
                 ].map(s=>(
                   <div key={s.label} style={{textAlign:'center',padding:'12px',background:'#f9fafb',borderRadius:10}}>
                     <div style={{fontSize:24,marginBottom:6}}>{s.icon}</div>
@@ -408,10 +534,10 @@ function App() {
                 <span style={{fontSize:12,color:'#9ca3af'}}>{logs.length} events</span>
               </div>
               {logs.map((l,i)=>(
-                <div className="log-item" key={i}>
+                <div className="log-item" key={l.id}>
                   <div className="log-dot" style={{background:l.color}}/>
-                  <div className="log-text">{l.msg}</div>
-                  <div className="log-time">{l.time}</div>
+                  <div className="log-text">{l.message}</div>
+                  <div className="log-time">{new Date(l.created_at).toLocaleString()}</div>
                 </div>
               ))}
             </div>

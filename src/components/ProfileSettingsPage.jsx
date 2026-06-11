@@ -1,36 +1,87 @@
 import { useState } from "react";
 import "../global.css";
 
+const Field = ({ label, name, type = "text", form, setForm }) => (
+  <div className="field">
+    <label className="field-label">{label}</label>
+    <input
+      className="field-input"
+      type={type}
+      value={form[name]}
+      onChange={(e) => setForm({ ...form, [name]: e.target.value })}
+    />
+  </div>
+);
+
 // ─── PROFILE PAGE ─────────────────────────────────────────────────────────────
-function ProfilePage() {
-  const [form, setForm] = useState({
-    firstName: "Sarah",
-    lastName: "Johnson",
-    email: "sarah.johnson@university.edu",
-    studentId: "STU-2024-8821",
-    university: "State University",
-    major: "Computer Science",
-    year: "3rd Year",
-    bio: "Passionate CS student focused on AI and machine learning.",
+function ProfilePage({ user, onUpdateUser }) {
+  const nameParts = (user?.name || "").split(" ");
+  const userFirst = nameParts[0] || "Sarah";
+  const userLast = nameParts.slice(1).join(" ") || "Johnson";
+
+  const [form, setForm] = useState(() => {
+    const savedDetails = user?.id ? localStorage.getItem(`scholar_track_profile_details_${user.id}`) : null;
+    const details = savedDetails ? JSON.parse(savedDetails) : {};
+    
+    return {
+      firstName: userFirst,
+      lastName: userLast,
+      email: user?.email || "sarah.johnson@university.edu",
+      studentId: user?.id ? `STU-2026-${user.id.toString().padStart(4, '0')}` : "STU-2024-8821",
+      university: details.university || "State University",
+      major: details.major || "Computer Science",
+      year: details.year || "3rd Year",
+      bio: details.bio || "Passionate CS student focused on AI and machine learning.",
+    };
   });
   const [saved, setSaved] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(() => user?.id ? localStorage.getItem('scholar_track_avatar_' + user.id) : null);
 
   const handleSave = () => {
+    if (user?.id) {
+      localStorage.setItem(`scholar_track_profile_details_${user.id}`, JSON.stringify({
+        university: form.university,
+        major: form.major,
+        year: form.year,
+        bio: form.bio
+      }));
+    }
+    
+    if (onUpdateUser) {
+      onUpdateUser({
+        name: `${form.firstName} ${form.lastName}`.trim(),
+        email: form.email
+      });
+    }
+
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
 
-  const Field = ({ label, name, type = "text" }) => (
-    <div className="field">
-      <label className="field-label">{label}</label>
-      <input
-        className="field-input"
-        type={type}
-        value={form[name]}
-        onChange={(e) => setForm({ ...form, [name]: e.target.value })}
-      />
-    </div>
-  );
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target.result;
+        setAvatarUrl(dataUrl);
+        if (user?.id) {
+          localStorage.setItem('scholar_track_avatar_' + user.id, dataUrl);
+          window.dispatchEvent(new Event('avatarUpdate'));
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveAvatar = (e) => {
+    e.stopPropagation();
+    setAvatarUrl(null);
+    if (user?.id) {
+      localStorage.removeItem('scholar_track_avatar_' + user.id);
+      window.dispatchEvent(new Event('avatarUpdate'));
+    }
+  };
 
   return (
     <div className="profile-page">
@@ -38,13 +89,42 @@ function ProfilePage() {
       {/* Avatar Section */}
       <div className="profile-avatar-section">
         <div className="profile-avatar-wrap">
-          <div className="profile-avatar">S</div>
-          <div className="profile-avatar-badge">✏</div>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="Avatar" className="profile-avatar" style={{ objectFit: 'cover' }} />
+          ) : (
+            <div className="profile-avatar">{(form.firstName || "S")[0].toUpperCase()}</div>
+          )}
         </div>
         <div>
           <h2 className="profile-name">{form.firstName} {form.lastName}</h2>
           <p className="profile-sub">{form.major} · {form.year}</p>
-          <p className="profile-sub2">{form.university}</p>
+          <p className="profile-sub2" style={{ marginBottom: '12px' }}>{form.university}</p>
+          
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button 
+              className="btn-outline-purple" 
+              onClick={() => document.getElementById('avatar-input').click()}
+              style={{ padding: '6px 12px', fontSize: '12.5px' }}
+            >
+              Upload Photo
+            </button>
+            <input
+              id="avatar-input"
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleAvatarChange}
+            />
+            {avatarUrl && (
+              <button 
+                className="btn-danger" 
+                onClick={handleRemoveAvatar}
+                style={{ padding: '6px 12px', fontSize: '12.5px' }}
+              >
+                Remove Photo
+              </button>
+            )}
+          </div>
         </div>
         <div className="profile-stat-row">
           {[["12", "Tasks Done"], ["3", "Pending"], ["94%", "On-Time Rate"]].map(([val, lbl]) => (
@@ -60,12 +140,12 @@ function ProfilePage() {
       <div className="card">
         <h3 className="card-title">Personal Information</h3>
         <div className="grid-2">
-          <Field label="First Name"   name="firstName" />
-          <Field label="Last Name"    name="lastName" />
-          <Field label="Email Address" name="email" type="email" />
-          <Field label="Student ID"   name="studentId" />
-          <Field label="University / Institution" name="university" />
-          <Field label="Major / Program" name="major" />
+          <Field label="First Name"   name="firstName" form={form} setForm={setForm} />
+          <Field label="Last Name"    name="lastName" form={form} setForm={setForm} />
+          <Field label="Email Address" name="email" type="email" form={form} setForm={setForm} />
+          <Field label="Student ID"   name="studentId" form={form} setForm={setForm} />
+          <Field label="University / Institution" name="university" form={form} setForm={setForm} />
+          <Field label="Major / Program" name="major" form={form} setForm={setForm} />
         </div>
 
         <div className="field">
@@ -99,8 +179,8 @@ function ProfilePage() {
       </div>
 
       {/* Danger Zone */}
-      <div className="card" style={{ borderColor: "#fecaca" }}>
-        <h3 className="card-title" style={{ color: "#dc2626" }}>Danger Zone</h3>
+      <div className="card" style={{ borderColor: "var(--danger)" }}>
+        <h3 className="card-title" style={{ color: "var(--danger)" }}>Danger Zone</h3>
         <div className="danger-row">
           <div>
             <div className="danger-label">Delete Account</div>
@@ -114,28 +194,31 @@ function ProfilePage() {
   );
 }
 
+const Toggle = ({ val, onChange }) => (
+  <div
+    className="toggle"
+    style={{ backgroundColor: val ? "var(--primary)" : "var(--border)" }}
+    onClick={() => onChange(!val)}
+  >
+    <div className="toggle-thumb" style={{ transform: val ? "translateX(20px)" : "translateX(2px)" }} />
+  </div>
+);
+
+const Row = ({ label, sub, val, onChange }) => (
+  <div className="settings-row">
+    <div>
+      <div className="settings-row-label">{label}</div>
+      {sub && <div className="settings-row-sub">{sub}</div>}
+    </div>
+    <Toggle val={val} onChange={onChange} />
+  </div>
+);
+
 // ─── SETTINGS PAGE ────────────────────────────────────────────────────────────
 function SettingsPage() {
   const [notif, setNotif] = useState({ email: true, push: false, deadlineReminder: true, weeklyDigest: false });
   const [prefs, setPrefs] = useState({ theme: "Light", language: "English", timezone: "UTC+5:30", dateFormat: "MM/DD/YYYY" });
   const [privacy, setPrivacy] = useState({ shareAnalytics: true, publicProfile: false });
-
-  const Toggle = ({ val, onChange }) => (
-    <button
-      className={`settings-toggle${val ? " on" : ""}`}
-      onClick={() => onChange(!val)}
-    />
-  );
-
-  const Row = ({ label, sub, val, onChange }) => (
-    <div className="settings-row">
-      <div>
-        <div className="settings-row-label">{label}</div>
-        {sub && <div className="settings-row-sub">{sub}</div>}
-      </div>
-      <Toggle val={val} onChange={onChange} />
-    </div>
-  );
 
   return (
     <div className="settings-page">
@@ -190,7 +273,7 @@ function SettingsPage() {
         <div className="field">
           <label className="field-label">Minimum Confidence Threshold</label>
           <div className="slider-wrap">
-            <input type="range" min={0} max={100} defaultValue={75} style={{ flex: 1, accentColor: "#6c63ff" }} />
+            <input type="range" min={0} max={100} defaultValue={75} style={{ flex: 1, accentColor: "var(--primary)" }} />
             <span className="slider-val">75%</span>
           </div>
           <span className="field-hint">Tasks below this confidence score will be flagged for manual review.</span>
@@ -233,9 +316,9 @@ function SettingsPage() {
   );
 }
 
-// ─── MAIN EXPORT ─ Settings tab by default ───────────────────────────────────
-export default function ProfileSettingsPage() {
-  const [activePage, setActivePage] = useState("settings");
+// ─── MAIN EXPORT ─────────────────────────────────────────────────────────────
+export default function ProfileSettingsPage({ user, onUpdateUser }) {
+  const [activePage, setActivePage] = useState("profile");
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -267,7 +350,7 @@ export default function ProfileSettingsPage() {
       </div>
 
       <div style={{ overflow: 'auto', flex: 1 }}>
-        {activePage === "profile"  && <ProfilePage />}
+        {activePage === "profile"  && <ProfilePage user={user} onUpdateUser={onUpdateUser} />}
         {activePage === "settings" && <SettingsPage />}
       </div>
     </div>

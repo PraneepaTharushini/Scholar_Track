@@ -3803,7 +3803,7 @@ function useNavigateUnstable() {
 		}
 		let path = resolveTo(to, JSON.parse(routePathnamesJson), locationPathname, options.relative === "path");
 		if (dataRouterContext == null && basename !== "/") path.pathname = path.pathname === "/" ? basename : joinPaths([basename, path.pathname]);
-		(!!options.replace ? navigator.replace : navigator.push)(path, options.state, options);
+		(options.replace ? navigator.replace : navigator.push)(path, options.state, options);
 	}, [
 		basename,
 		navigator,

@@ -49,12 +49,22 @@ export const api = {
   /** Save multiple tasks at once — used by "Confirm & Save" */
   batchSaveTasks: (tasks) => request('POST', '/tasks/batch', { tasks }),
 
+  /** Increment focus sessions count for a task */
+  incrementTaskFocus: (id) => request('POST', `/tasks/${id}/focus`),
+
   // ── Analytics ────────────────────────────────────────────
   getSummary:    () => request('GET', '/analytics/summary'),
   getStatus:     () => request('GET', '/analytics/status'),
   getCategories: () => request('GET', '/analytics/categories'),
   getInsights:   () => request('GET', '/analytics/insights'),
   getTimeline:   () => request('GET', '/analytics/timeline'),
+  getAnalyticsAll: () => request('GET', '/analytics/all'),
+
+  // ── Priority & Recommendations ───────────────────────────
+  scoreAllTasks:      () => request('POST', '/priority/score-all'),
+  getRecommendations: () => request('GET', '/priority/recommendations'),
+  scoreTask:          (task) => request('POST', '/priority/score-task', task),
+  getQuadrants:       () => request('GET', '/priority/quadrants'),
 
   // ── Token management ─────────────────────────────────────
   setToken:   (token) => localStorage.setItem('scholar_track_token', token),

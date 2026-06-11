@@ -1,20 +1,32 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import './UploadPage.css';
+import { useNavigate } from 'react-router-dom';
+import { useTaskContext } from '../context/TaskContext';
 
 const ACCEPTED = ['.pdf', '.png', '.jpg', '.jpeg', '.docx', '.doc', '.txt'];
-
-const SAMPLE_DOCS = [
-  { name: 'CS3042_Course_Outline.pdf', size: '245 KB', status: 'processed', tasks: 7, date: 'May 9, 2026' },
-  { name: 'PHY1012_Lab_Manual.pdf',    size: '1.2 MB', status: 'processed', tasks: 3, date: 'May 8, 2026' },
-  { name: 'MAT2012_Syllabus.docx',     size: '88 KB',  status: 'processing', tasks: 0, date: 'May 10, 2026' },
-];
+const API = '/api';
 
 export default function UploadPage() {
   const [dragging, setDragging] = useState(false);
   const [files, setFiles] = useState([]);
-  const [docs, setDocs] = useState(SAMPLE_DOCS);
-  const [uploading, setUploading] = useState(false);
+  const [docs, setDocs] = useState([]);
   const inputRef = useRef();
+  const navigate = useNavigate();
+  const { loadReviewTasks } = useTaskContext();
+
+  useEffect(() => {
+    fetchDocs();
+  }, []);
+
+  const fetchDocs = async () => {
+    try {
+      const res = await fetch(`${API}/documents`);
+      const data = await res.json();
+      setDocs(data.documents || []);
+    } catch (e) {
+      console.error('Failed to fetch documents:', e);
+    }
+  };
 
   const addFiles = (newFiles) => {
     const list = Array.from(newFiles).map(f => ({
@@ -23,24 +35,62 @@ export default function UploadPage() {
       name: f.name,
       size: formatBytes(f.size),
       progress: 0,
+      done: false,
+      error: null,
+      task: null,
     }));
     setFiles(prev => [...prev, ...list]);
-    // Simulate upload progress
-    list.forEach(item => simulateUpload(item.id));
+    list.forEach(item => uploadFile(item));
   };
 
-  const simulateUpload = (id) => {
-    let pct = 0;
-    const interval = setInterval(() => {
-      pct += Math.random() * 20;
-      if (pct >= 100) {
-        pct = 100;
-        clearInterval(interval);
-        setFiles(prev => prev.map(f => f.id === id ? { ...f, progress: 100, done: true } : f));
-      } else {
-        setFiles(prev => prev.map(f => f.id === id ? { ...f, progress: Math.round(pct) } : f));
+  const uploadFile = async (item) => {
+    const formData = new FormData();
+    formData.append('file', item.file);
+
+    try {
+      setFiles(prev => prev.map(f => f.id === item.id ? { ...f, progress: 30 } : f));
+
+      const uploadRes = await fetch(`${API}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json();
+        throw new Error(err.error || 'Upload failed');
       }
-    }, 300);
+
+      setFiles(prev => prev.map(f => f.id === item.id ? { ...f, progress: 60 } : f));
+
+      const taskRes = await fetch(`${API}/task-details`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: item.name }),
+      });
+
+      if (!taskRes.ok) {
+        const err = await taskRes.json();
+        throw new Error(err.error || 'AI extraction failed');
+      }
+
+      const taskData = await taskRes.json();
+
+      setFiles(prev => prev.map(f =>
+        f.id === item.id ? { ...f, progress: 100, done: true, task: taskData } : f
+      ));
+
+      fetchDocs();
+
+      // Send to context and navigate to Review Tasks page
+      const tasksArray = Array.isArray(taskData) ? taskData : [taskData];
+      loadReviewTasks(tasksArray, { filename: item.name });
+      navigate('/review');
+
+    } catch (e) {
+      setFiles(prev => prev.map(f =>
+        f.id === item.id ? { ...f, progress: 0, error: e.message } : f
+      ));
+    }
   };
 
   const removeFile = (id) => setFiles(prev => prev.filter(f => f.id !== id));
@@ -59,9 +109,9 @@ export default function UploadPage() {
 
   const fileIcon = (name) => {
     const ext = name.split('.').pop().toLowerCase();
-    if (ext === 'pdf')  return '📕';
-    if (['png','jpg','jpeg'].includes(ext)) return '🖼️';
-    if (['doc','docx'].includes(ext)) return '📘';
+    if (ext === 'pdf') return '📕';
+    if (['png', 'jpg', 'jpeg'].includes(ext)) return '🖼️';
+    if (['doc', 'docx'].includes(ext)) return '📘';
     return '📄';
   };
 
@@ -72,14 +122,16 @@ export default function UploadPage() {
         <div className="up-info-card">
           <span className="up-info-icon">📤</span>
           <div>
-            <div className="up-info-num">{docs.filter(d => d.status === 'processed').length}</div>
+            <div className="up-info-num">{docs.filter(d => d.status === 'Processed').length}</div>
             <div className="up-info-lbl">Docs Processed</div>
           </div>
         </div>
         <div className="up-info-card">
           <span className="up-info-icon">✅</span>
           <div>
-            <div className="up-info-num">{docs.reduce((a, d) => a + d.tasks, 0)}</div>
+            <div className="up-info-num">
+              {docs.filter(d => d.status === 'Processed').length * 2}
+            </div>
             <div className="up-info-lbl">Tasks Extracted</div>
           </div>
         </div>
@@ -93,7 +145,7 @@ export default function UploadPage() {
         <div className="up-info-card">
           <span className="up-info-icon">⚡</span>
           <div>
-            <div className="up-info-num">~2.3s</div>
+            <div className="up-info-num">~1.2s</div>
             <div className="up-info-lbl">Avg. Process Time</div>
           </div>
         </div>
@@ -145,12 +197,23 @@ export default function UploadPage() {
                   <div className="up-queue-info">
                     <div className="up-queue-name">{f.name}</div>
                     <div className="up-queue-size">{f.size}</div>
-                    <div className="up-prog-bar">
-                      <div className="up-prog-fill" style={{ width: `${f.progress}%` }} />
-                    </div>
-                    <div className="up-prog-label">
-                      {f.done ? '✅ Processing complete' : `Uploading… ${f.progress}%`}
-                    </div>
+                    
+                    {!f.error && (
+                      <>
+                        <div className="up-prog-bar">
+                          <div className="up-prog-fill" style={{ width: `${f.progress}%` }} />
+                        </div>
+                        <div className="up-prog-label">
+                          {f.done ? '✅ Processing complete' : `Uploading… ${f.progress}%`}
+                        </div>
+                      </>
+                    )}
+
+                    {f.error && (
+                      <div className="up-prog-label" style={{ color: '#ef4444' }}>
+                        ❌ {f.error}
+                      </div>
+                    )}
                   </div>
                   <button className="up-remove-btn" onClick={() => removeFile(f.id)}>✕</button>
                 </div>
@@ -164,22 +227,29 @@ export default function UploadPage() {
           <div className="panel-header">
             <div className="panel-title">📂 Recent Documents</div>
           </div>
-          {docs.map((d, i) => (
-            <div key={i} className="up-doc-row">
-              <span className="up-file-icon">{fileIcon(d.name)}</span>
-              <div className="up-doc-info">
-                <div className="up-doc-name">{d.name}</div>
-                <div className="up-doc-meta">{d.size} · {d.date}</div>
-              </div>
-              <div className="up-doc-right">
-                {d.status === 'processed' ? (
-                  <span className="up-status-ok">✅ {d.tasks} tasks found</span>
-                ) : (
-                  <span className="up-status-proc">⏳ Processing…</span>
-                )}
-              </div>
+          {docs.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+              No documents uploaded yet.
             </div>
-          ))}
+          ) : (
+            docs.map((d, i) => (
+              <div key={i} className="up-doc-row">
+                <span className="up-file-icon">{fileIcon(d.filename)}</span>
+                <div className="up-doc-info">
+                  <div className="up-doc-name">{d.filename}</div>
+                </div>
+                <div className="up-doc-right">
+                  {d.status === 'Processed' ? (
+                    <span className="up-status-ok">✅ Processed</span>
+                  ) : d.status === 'Failed' ? (
+                    <span style={{ color: '#ef4444' }}>❌ Failed</span>
+                  ) : (
+                    <span className="up-status-proc">⏳ {d.status}</span>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
           <div className="up-how-it-works">
             <div className="up-how-title">🤖 How it works</div>
             <div className="up-how-steps">

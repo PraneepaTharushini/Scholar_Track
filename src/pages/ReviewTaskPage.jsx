@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useTaskContext } from '../context/TaskContext';
 import './ReviewTaskPage.css';
 import { api } from '../services/api';
 
@@ -236,23 +238,35 @@ const TaskCard = ({ task, index, onChange, onRemove }) => {
 
 // ── Review Task Page ─────────────────────────────────────────
 const ReviewTaskPage = () => {
-  const [tasks, setTasks] = useState([
-    {
-      id: 'new_1',
-      taskTitle: '',
-      subject: '',
-      deadline: '',
-      priority: 'low',
-      category: 'Assignment',
-      description: '',
-      confidence: 100,
-      hasError: false,
-    },
-  ]);
+  const navigate = useNavigate();
+  const { reviewTasks, uploadMeta, clearReviewTasks } = useTaskContext();
+
+  const [tasks, setTasks] = useState([]);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
-  const [nextId, setNextId] = useState(2); // start at 2 since 1 is already used
+  const [nextId, setNextId] = useState(1);
+
+  useEffect(() => {
+    if (reviewTasks && reviewTasks.length > 0) {
+      setTasks(reviewTasks);
+    } else {
+      setTasks([
+        {
+          id: 'new_1',
+          taskTitle: '',
+          subject: '',
+          deadline: '',
+          priority: 'low',
+          category: 'Assignment',
+          description: '',
+          confidence: 100,
+          hasError: false,
+        },
+      ]);
+      setNextId(2);
+    }
+  }, [reviewTasks]);
 
   const handleChange = (taskId, field, value) => {
     setTasks((prev) =>
@@ -272,7 +286,7 @@ const ReviewTaskPage = () => {
         taskTitle: '',
         subject: '',
         deadline: '',
-        priority: 'low',       // will be recomputed when deadline is set
+        priority: 'low',
         category: 'Assignment',
         description: '',
         confidence: 100,
@@ -294,7 +308,6 @@ const ReviewTaskPage = () => {
         task_title:    t.taskTitle,
         subject:       t.subject,
         deadline:      t.deadline || null,
-        // priority intentionally omitted — backend always computes it from deadline
         category:      t.category,
         description:   t.description,
         confidence:    t.confidence,
@@ -303,8 +316,12 @@ const ReviewTaskPage = () => {
       }));
       await api.batchSaveTasks(payload);
       setSaveSuccess(true);
-      setTasks([]); // clear after saving
-      setTimeout(() => setSaveSuccess(false), 4000);
+      clearReviewTasks();
+      setTasks([]);
+      setTimeout(() => {
+        setSaveSuccess(false);
+        navigate('/tasks');
+      }, 1500);
     } catch (err) {
       setSaveError(err.message || 'Failed to save tasks. Please try again.');
     } finally {
@@ -313,8 +330,10 @@ const ReviewTaskPage = () => {
   };
 
   const handleCancel = () => {
+    clearReviewTasks();
     setTasks([]);
     setSaveError('');
+    navigate('/upload');
   };
 
   return (
@@ -328,10 +347,40 @@ const ReviewTaskPage = () => {
           </svg>
         </div>
         <p className="review-banner__text">
-          Add tasks below, then click <strong>Confirm &amp; Save Tasks</strong> to store them in your task list.
+          {uploadMeta ? (
+            <>The system extracted the following tasks using <strong>OCR + NLP</strong>. Please review and edit before saving.</>
+          ) : (
+            <>Add tasks below, then click <strong>Confirm &amp; Save Tasks</strong> to store them in your task list.</>
+          )}
         </p>
         <span className="review-banner__count">{tasks.length} task{tasks.length !== 1 ? 's' : ''}</span>
       </div>
+
+      {/* Source Document Info */}
+      {uploadMeta && (
+        <div className="review-source">
+          <div className="review-source__item">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <rect x="2" y="1" width="10" height="14" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+            </svg>
+            <span>Source: <strong>{uploadMeta.filename}</strong></span>
+          </div>
+          <div className="review-source__item">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M8 4v4l3 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <span>Processed <strong>just now</strong></span>
+          </div>
+          <div className="review-source__item">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M3 8l3.5 3.5L13 4.5" stroke="#10B981" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span style={{color:'var(--success)'}}>OCR completed</span>
+          </div>
+        </div>
+      )}
 
       {/* Task Cards */}
       <div className="review-tasks-grid">
@@ -387,7 +436,7 @@ const ReviewTaskPage = () => {
         </div>
         <div className="review-footer__actions">
           <button className="btn btn--outline" onClick={handleCancel}>
-            Clear All
+            {uploadMeta ? 'Cancel' : 'Clear All'}
           </button>
           <button
             className={`btn btn--primary ${hasErrors || hasEmptyTitles || tasks.length === 0 || isSaving ? 'btn--disabled' : ''}`}

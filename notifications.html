@@ -144,33 +144,7 @@
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState } = React;
-
-const notifications = [
-  { id:1, type:'urgent', icon:'🚨', title:'Database Project Due Today!', msg:'Your DBMS assignment is due at 11:59 PM. Submit now to avoid late penalty.', time:'9:30 AM', unread:true, tags:['urgent'], course:'DBMS', deadline:'Today 11:59 PM' },
-  { id:2, type:'reminder', icon:'⏰', title:'Algebra Exam Tomorrow', msg:'Your Algebra midterm is scheduled for tomorrow at 2:00 PM. Review your notes tonight.', time:'8:15 AM', unread:true, tags:['reminder'], course:'Mathematics', deadline:'Tomorrow 2:00 PM' },
-  { id:3, type:'ai', icon:'🤖', title:'AI Alert: Delay Risk Detected', msg:'Based on your workload, you may delay the Statistics Assignment. Suggested start: today 4 PM.', time:'Yesterday', unread:true, tags:['ai'], course:'Statistics', deadline:'In 3 days' },
-  { id:4, type:'info', icon:'📌', title:'CS Group Project – 2 Days Left', msg:'Code review and documentation are pending. Coordinate with your team today.', time:'2 days ago', unread:false, tags:['info'], course:'CS3022', deadline:'In 2 days 6:00 PM' },
-  { id:5, type:'success', icon:'✅', title:'Research Paper Submitted!', msg:'Your Physics research paper was submitted successfully. View confirmation in task history.', time:'Yesterday 3:45 PM', unread:false, tags:['success'], course:'Physics', deadline:'Completed' },
-  { id:6, type:'reminder', icon:'📧', title:'Email Parsed: New Tasks Found', msg:'3 new tasks were extracted from your syllabus email. Review and confirm to add them.', time:'3 days ago', unread:false, tags:['reminder','info'], course:'System', deadline:'-' },
-];
-
-const settings = [
-  { id:'email', label:'Email Reminders', desc:'Get deadline alerts in your Gmail inbox', on:true },
-  { id:'push', label:'Browser Push Notifications', desc:'Instant alerts for urgent tasks', on:true },
-  { id:'h24', label:'24-Hour Advance Reminder', desc:'Notified one day before any deadline', on:true },
-  { id:'h1', label:'1-Hour Final Warning', desc:'Last-minute reminder before deadline', on:true },
-  { id:'ai', label:'AI Delay Prediction Alerts', desc:'Warned when ML detects delay risk', on:true },
-  { id:'schedule', label:'Daily Study Schedule', desc:'Personalised study plan each morning', on:false },
-  { id:'digest', label:'Weekly Summary Digest', desc:'Weekly email of your productivity', on:false },
-];
-
-const upcoming = [
-  { title:'Database Project', course:'DBMS', time:'Today 11:59 PM', color:'#ef4444', urgency:'3 hrs' },
-  { title:'Algebra Midterm', course:'Mathematics', time:'Tomorrow 2:00 PM', color:'#f59e0b', urgency:'17 hrs' },
-  { title:'CS Group Project', course:'CS3022', time:'In 2 days', color:'#6366f1', urgency:'2 days' },
-  { title:'Statistics Assignment', course:'Statistics', time:'In 3 days', color:'#8b5cf6', urgency:'3 days' },
-];
+const { useState, useEffect } = React;
 
 const navItems = [
   { icon:'📊', label:'Dashboard', href:'index.html' },
@@ -190,19 +164,71 @@ function Toggle({ on, onToggle }) {
 
 function App() {
   const [filter, setFilter] = useState('all');
-  const [items, setItems] = useState(notifications);
-  const [toggles, setToggles] = useState(() => {
-    const m = {}; settings.forEach(s => m[s.id] = s.on); return m;
-  });
+  const [items, setItems] = useState([]);
+  const [settingsList, setSettingsList] = useState([]);
+  const [toggles, setToggles] = useState({});
+  const [upcoming, setUpcoming] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [notifsRes, prefsRes, deadlinesRes] = await Promise.all([
+          fetch('http://localhost:3000/api/notifications'),
+          fetch('http://localhost:3000/api/reminders/preferences'),
+          fetch('http://localhost:3000/api/reminders/deadlines')
+        ]);
+        const notifs = await notifsRes.json();
+        const prefs = await prefsRes.json();
+        const deadlines = await deadlinesRes.json();
+
+        setItems(notifs);
+        setSettingsList(prefs);
+        
+        const togglesMap = {};
+        prefs.forEach(s => togglesMap[s.pref_key] = s.is_enabled);
+        setToggles(togglesMap);
+
+        setUpcoming(deadlines);
+      } catch (e) {
+        console.error('Error fetching data:', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
 
   const filtered = filter === 'all' ? items
-    : filter === 'unread' ? items.filter(n => n.unread)
+    : filter === 'unread' ? items.filter(n => n.is_unread)
     : items.filter(n => n.type === filter);
 
-  const unreadCount = items.filter(n=>n.unread).length;
+  const unreadCount = items.filter(n=>n.is_unread).length;
 
-  const dismiss = id => setItems(prev => prev.filter(n => n.id !== id));
-  const markAll = () => setItems(prev => prev.map(n => ({...n, unread:false})));
+  const dismiss = async id => {
+    setItems(prev => prev.filter(n => n.id !== id));
+    await fetch(`http://localhost:3000/api/notifications/${id}`, { method: 'DELETE' });
+  };
+  
+  const markAll = async () => {
+    setItems(prev => prev.map(n => ({...n, is_unread:false})));
+    await fetch('http://localhost:3000/api/notifications/mark-all-read', { method: 'PATCH' });
+  };
+  
+  const markRead = async id => {
+    setItems(prev => prev.map(n => n.id === id ? {...n, is_unread:false} : n));
+    await fetch(`http://localhost:3000/api/notifications/${id}/read`, { method: 'PATCH' });
+  };
+
+  const handleToggle = async (key) => {
+    const current = toggles[key];
+    setToggles(p => ({...p, [key]: !current}));
+    await fetch(`http://localhost:3000/api/reminders/preferences/${key}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_enabled: !current })
+    });
+  };
 
   const counts = {
     urgent: items.filter(n=>n.type==='urgent').length,
@@ -210,6 +236,8 @@ function App() {
     unread: unreadCount,
     ai: items.filter(n=>n.type==='ai').length,
   };
+
+  if (loading) return <div style={{padding: 40, textAlign:'center'}}>Loading...</div>;
 
   return (
     <>
@@ -290,22 +318,22 @@ function App() {
                       <div className="empty-txt">All caught up! No notifications here.</div>
                     </div>
                   ) : filtered.map(n => (
-                    <div key={n.id} className={`notif-item${n.unread?' unread':''}`}>
-                      {n.unread && <div className="unread-dot"/>}
+                    <div key={n.id} className={`notif-item${n.is_unread?' unread':''}`} onClick={() => n.is_unread && markRead(n.id)}>
+                      {n.is_unread && <div className="unread-dot"/>}
                       <div className={`notif-ico ${n.type}`}>{n.icon}</div>
                       <div className="notif-body">
                         <div className="notif-top">
                           <div className="notif-ttl">{n.title}</div>
-                          <div className="notif-time">{n.time}</div>
+                          <div className="notif-time">{n.time_label || n.time}</div>
                         </div>
-                        <div className="notif-msg">{n.msg}</div>
+                        <div className="notif-msg">{n.message || n.msg}</div>
                         <div className="notif-tags">
-                          {n.tags.map(t=><span key={t} className={`tag ${t}`}>{t.toUpperCase()}</span>)}
+                          {n.tags && n.tags.map(t=><span key={t} className={`tag ${t}`}>{t.toUpperCase()}</span>)}
                           <span style={{fontSize:11,color:'#9ca3af',marginLeft:4}}>{n.course}</span>
                         </div>
                         <div className="notif-action">
                           <button className="btn-sm primary">View Task</button>
-                          <button className="btn-sm ghost" onClick={()=>dismiss(n.id)}>Dismiss</button>
+                          <button className="btn-sm ghost" onClick={(e)=>{ e.stopPropagation(); dismiss(n.id); }}>Dismiss</button>
                         </div>
                       </div>
                     </div>
@@ -324,9 +352,9 @@ function App() {
                     <div className="deadline-bar" style={{background:d.color}}/>
                     <div className="deadline-info">
                       <div className="deadline-title">{d.title}</div>
-                      <div className="deadline-sub">{d.course} · {d.time}</div>
+                      <div className="deadline-sub">{d.course} · {d.deadline_time || d.time}</div>
                     </div>
-                    <div className="deadline-time" style={{color:d.color}}>{d.urgency}</div>
+                    <div className="deadline-time" style={{color:d.color}}>{d.urgency_label || d.urgency}</div>
                   </div>
                 ))}
               </div>
@@ -339,13 +367,13 @@ function App() {
                   <div className="panel-title">⚙️ Reminder Preferences</div>
                 </div>
                 <div className="settings-list">
-                  {settings.map(s=>(
+                  {settingsList.map(s=>(
                     <div className="setting-row" key={s.id}>
                       <div className="setting-info">
                         <div className="setting-name">{s.label}</div>
-                        <div className="setting-desc">{s.desc}</div>
+                        <div className="setting-desc">{s.description || s.desc}</div>
                       </div>
-                      <Toggle on={toggles[s.id]} onToggle={()=>setToggles(p=>({...p,[s.id]:!p[s.id]}))}/>
+                      <Toggle on={toggles[s.pref_key]} onToggle={()=>handleToggle(s.pref_key)}/>
                     </div>
                   ))}
                 </div>

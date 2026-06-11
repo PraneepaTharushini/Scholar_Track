@@ -31,16 +31,11 @@ const AnalyticsDashboard = () => {
       setLoading(true);
       setError('');
       try {
-        const [sumData, statusData, catData, insightData] = await Promise.all([
-          api.getSummary(),
-          api.getStatus(),
-          api.getCategories(),
-          api.getInsights(),
-        ]);
-        setSummary(sumData);
-        setTaskStatus(statusData.status || []);
-        setCategories(catData.categories || []);
-        setInsights(insightData.insights || []);
+        const data = await api.getAnalyticsAll();
+        setSummary(data.summary);
+        setTaskStatus(data.status || []);
+        setCategories(data.categories || []);
+        setInsights(data.insights || []);
       } catch (err) {
         setError(err.message || 'Failed to load analytics. Please try again.');
       } finally {

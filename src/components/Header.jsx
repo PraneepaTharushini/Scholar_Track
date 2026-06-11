@@ -1,14 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Header.css';
 
-const Header = ({ title, user = 'Sarah', theme = 'light', onToggleTheme }) => {
+const Header = ({ title, user, theme = 'light', onToggleTheme, onLogout, onToggleSidebar }) => {
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
+
+  const name = typeof user === 'object' ? (user?.name || 'Student') : (user || 'Student');
+  const userId = typeof user === 'object' ? user?.id : null;
+  const [avatarUrl, setAvatarUrl] = useState(() => userId ? localStorage.getItem('scholar_track_avatar_' + userId) : null);
+
+  useEffect(() => {
+    const handleAvatarUpdate = () => {
+      if (userId) {
+        setAvatarUrl(localStorage.getItem('scholar_track_avatar_' + userId));
+      }
+    };
+    window.addEventListener('avatarUpdate', handleAvatarUpdate);
+    return () => window.removeEventListener('avatarUpdate', handleAvatarUpdate);
+  }, [userId]);
 
   return (
     <header className="header">
       <div className="header__left">
+        <button className="header__menu-btn" onClick={onToggleSidebar} aria-label="Open sidebar">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        </button>
         <h1 className="header__title">{title}</h1>
       </div>
 
@@ -42,11 +61,15 @@ const Header = ({ title, user = 'Sarah', theme = 'light', onToggleTheme }) => {
             aria-haspopup="true"
             aria-expanded={profileOpen}
           >
-            <div className="header__avatar">
-              <span>{user.charAt(0).toUpperCase()}</span>
+            <div className="header__avatar" style={{ overflow: 'hidden' }}>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span>{name.charAt(0).toUpperCase()}</span>
+              )}
             </div>
             <div className="header__user-info">
-              <span className="header__user-name">{user}</span>
+              <span className="header__user-name">{name}</span>
               <span className="header__user-role">Student</span>
             </div>
             <svg
@@ -80,7 +103,10 @@ const Header = ({ title, user = 'Sarah', theme = 'light', onToggleTheme }) => {
               <div className="header__drop-divider" />
               <button
                 className="header__drop-item danger"
-                onClick={() => window.location.reload()}
+                onClick={() => {
+                  if (onLogout) onLogout();
+                  setProfileOpen(false);
+                }}
               >
                 <span>🚪</span> Sign Out
               </button>
