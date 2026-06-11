@@ -1,0 +1,4 @@
+Unix Shell Programming Lab Sheet
+1. Create directories and manage permissions.
+2. Write a shell script to automate backup.
+3. Implement a simple shell in C.

@@ -1,10 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Header.css';
 
-const Header = ({ title, user = 'Sarah', theme = 'light', onToggleTheme, onLogout, onToggleSidebar }) => {
+const Header = ({ title, user, theme = 'light', onToggleTheme, onLogout, onToggleSidebar }) => {
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
+
+  const name = typeof user === 'object' ? (user?.name || 'Student') : (user || 'Student');
+  const userId = typeof user === 'object' ? user?.id : null;
+  const [avatarUrl, setAvatarUrl] = useState(() => userId ? localStorage.getItem('scholar_track_avatar_' + userId) : null);
+
+  useEffect(() => {
+    const handleAvatarUpdate = () => {
+      if (userId) {
+        setAvatarUrl(localStorage.getItem('scholar_track_avatar_' + userId));
+      }
+    };
+    window.addEventListener('avatarUpdate', handleAvatarUpdate);
+    return () => window.removeEventListener('avatarUpdate', handleAvatarUpdate);
+  }, [userId]);
 
   return (
     <header className="header">
@@ -47,11 +61,15 @@ const Header = ({ title, user = 'Sarah', theme = 'light', onToggleTheme, onLogou
             aria-haspopup="true"
             aria-expanded={profileOpen}
           >
-            <div className="header__avatar">
-              <span>{user.charAt(0).toUpperCase()}</span>
+            <div className="header__avatar" style={{ overflow: 'hidden' }}>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span>{name.charAt(0).toUpperCase()}</span>
+              )}
             </div>
             <div className="header__user-info">
-              <span className="header__user-name">{user}</span>
+              <span className="header__user-name">{name}</span>
               <span className="header__user-role">Student</span>
             </div>
             <svg

@@ -1,0 +1,2 @@
+Unix Shell Programming Lab Sheet
+1. Create directories and manage permissions.

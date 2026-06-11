@@ -23,6 +23,7 @@ from models.db_queries import (
     get_pending_tasks,
     get_completed_tasks,
     save_priority_score,
+    save_priority_scores_batch,
 )
 
 # ---------------------------------------------------------------------------
@@ -97,9 +98,8 @@ def score_all_tasks(student_id: int):
 
     ranked = rank_tasks(pending, completed)
 
-    # Persist scores back to DB so frontend can read them directly
-    for task in ranked:
-        save_priority_score(task["task_id"], task["priority_score"], task["quadrant"])
+    # Persist scores back to DB so frontend can read them directly in batch
+    save_priority_scores_batch(ranked, pending)
 
     return jsonify({
         "student_id":      student_id,
@@ -136,6 +136,20 @@ def get_recommendations(student_id: int):
 
     report = generate_recommendations(pending, completed)
 
+    from datetime import date, datetime
+    total = len(pending) + len(completed)
+    overdue_count = 0
+    now = date.today()
+    for t in pending:
+        d = t.get("deadline")
+        if d:
+            if isinstance(d, datetime):
+                d = d.date()
+            elif isinstance(d, str):
+                d = date.fromisoformat(d[:10])
+            if d < now:
+                overdue_count += 1
+
     return jsonify({
         "student_id":         student_id,
         "top_recommendation": report["top_recommendation"],
@@ -149,6 +163,12 @@ def get_recommendations(student_id: int):
         "eliminate":          _serialise_tasks(report["eliminate"]),
         "overdue_alerts":     _serialise_tasks(report["overdue_alerts"]),
         "ranked_tasks":       _serialise_tasks(report["ranked_tasks"]),
+        "summary": {
+            "total": total,
+            "completed": len(completed),
+            "pending": len(pending),
+            "overdue": overdue_count
+        }
     })
 
 

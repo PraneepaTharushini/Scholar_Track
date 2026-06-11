@@ -79,11 +79,8 @@ export default function Dashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [sumData, recsData] = await Promise.all([
-        api.getSummary(),
-        api.getRecommendations()
-      ]);
-      setSummary(sumData);
+      const recsData = await api.getRecommendations();
+      setSummary(recsData.summary);
       setRecs(recsData);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);

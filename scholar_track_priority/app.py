@@ -5,7 +5,7 @@ from flask_cors import CORS
 
 from extensions import db
 from routes import priority_bp
-from routes.extra_routes import auth_bp, tasks_bp, analytics_bp
+from routes.extra_routes import auth_bp, tasks_bp, analytics_bp, documents_bp
 
 
 DATABASE_URL = os.getenv(
@@ -23,6 +23,7 @@ app.register_blueprint(priority_bp, url_prefix="/api/priority")
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
 app.register_blueprint(tasks_bp, url_prefix="/api/tasks")
 app.register_blueprint(analytics_bp, url_prefix="/api/analytics")
+app.register_blueprint(documents_bp, url_prefix="/api")
 
 print("API ROUTES LOADED")
 print("REGISTERED ROUTES:", app.url_map)

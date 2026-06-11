@@ -39,6 +39,7 @@ def get_pending_tasks(student_id: int) -> list[dict]:
             t.deadline               AS deadline,
             t.status,
             t.priority_score,
+            t.quadrant,
             t.category               AS category,
             t.importance_override,
             t.focus_sessions,
@@ -107,4 +108,60 @@ def save_priority_score(task_id: int, score: float, quadrant: str) -> None:
             "now":      datetime.utcnow(),
             "task_id":  task_id,
         })
+
+
+def save_priority_scores_batch(ranked_tasks: list[dict], pending_tasks: list[dict]) -> None:
+    """
+    Persist the calculated priority scores and quadrants back to the task rows in a single batch,
+    only updating tasks whose score or quadrant has actually changed.
+    """
+    db = _get_db()
+    
+    # Create lookup map for existing values
+    pending_lookup = {t["task_id"]: t for t in pending_tasks}
+    
+    updates = []
+    now = datetime.utcnow()
+    
+    for t in ranked_tasks:
+        orig = pending_lookup.get(t["task_id"])
+        
+        score_diff = False
+        if orig:
+            orig_score = orig.get("priority_score")
+            new_score = t["priority_score"]
+            if orig_score is None and new_score is not None:
+                score_diff = True
+            elif orig_score is not None and new_score is None:
+                score_diff = True
+            elif orig_score is not None and new_score is not None:
+                if abs(float(orig_score) - float(new_score)) > 0.0001:
+                    score_diff = True
+        else:
+            score_diff = True
+            
+        quadrant_diff = not orig or orig.get("quadrant") != t["quadrant"]
+        
+        if score_diff or quadrant_diff:
+            updates.append({
+                "score": t["priority_score"],
+                "quadrant": t["quadrant"],
+                "now": now,
+                "task_id": t["task_id"]
+            })
+            
+    if not updates:
+        return
+        
+    query = """
+        UPDATE tasks
+        SET priority_score = :score,
+            quadrant       = :quadrant,
+            scored_at      = :now
+        WHERE id = :task_id
+    """
+    
+    with db.engine.begin() as conn:
+        for update in updates:
+            conn.execute(query, update)
 

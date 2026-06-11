@@ -58,6 +58,7 @@ export const api = {
   getCategories: () => request('GET', '/analytics/categories'),
   getInsights:   () => request('GET', '/analytics/insights'),
   getTimeline:   () => request('GET', '/analytics/timeline'),
+  getAnalyticsAll: () => request('GET', '/analytics/all'),
 
   // ── Priority & Recommendations ───────────────────────────
   scoreAllTasks:      () => request('POST', '/priority/score-all'),

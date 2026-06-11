@@ -14,6 +14,7 @@ import SystemInfo from './pages/SystemInfo';
 import AcademicCalendar from './components/AcademicCalendar';
 import UploadPage from './pages/UploadPage';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { TaskProvider } from './context/TaskContext';
 import './App.css';
 
 /* ── Page titles mapped to routes ─────────────────────────── */
@@ -130,7 +131,7 @@ function TasksPage() {
 }
 
 /* ── Main app layout (after login) ──────────────────────── */
-const AppLayout = ({ user, onLogout }) => {
+const AppLayout = ({ user, onLogout, onUpdateUser }) => {
   const location = useLocation();
   const title = PAGE_TITLES[location.pathname] || 'Scholar Track';
   const { theme, toggleTheme } = useTheme();
@@ -147,7 +148,7 @@ const AppLayout = ({ user, onLogout }) => {
       <div className="app-main">
         <Header 
           title={title} 
-          user={user?.name || 'Student'} 
+          user={user} 
           theme={theme} 
           onToggleTheme={toggleTheme} 
           onLogout={onLogout} 
@@ -163,7 +164,7 @@ const AppLayout = ({ user, onLogout }) => {
             <Route path="/analytics"     element={<AnalyticsDashboard />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/system"        element={<SystemInfo />} />
-            <Route path="/settings"      element={<ProfilePage />} />
+            <Route path="/settings"      element={<ProfilePage user={user} onUpdateUser={onUpdateUser} />} />
           </Routes>
         </main>
       </div>
@@ -182,6 +183,12 @@ function AppInner() {
         const { api } = await import('./services/api');
         if (api.hasToken()) {
           const res = await api.getMe();
+          const savedProfile = localStorage.getItem(`scholar_track_profile_${res.user.id}`);
+          if (savedProfile) {
+            const parsed = JSON.parse(savedProfile);
+            res.user.name = parsed.name || res.user.name;
+            res.user.email = parsed.email || res.user.email;
+          }
           setUser(res.user);
         }
       } catch (err) {
@@ -192,6 +199,18 @@ function AppInner() {
     };
     checkSession();
   }, []);
+
+  const handleUpdateUser = (updatedData) => {
+    setUser(prev => {
+      if (!prev) return null;
+      const newUser = { ...prev, ...updatedData };
+      localStorage.setItem(`scholar_track_profile_${prev.id}`, JSON.stringify({
+        name: newUser.name,
+        email: newUser.email
+      }));
+      return newUser;
+    });
+  };
 
   const handleLogin = (userData) => {
     setUser(userData);
@@ -219,7 +238,7 @@ function AppInner() {
 
   return (
     <BrowserRouter>
-      <AppLayout user={user} onLogout={handleLogout} />
+      <AppLayout user={user} onLogout={handleLogout} onUpdateUser={handleUpdateUser} />
     </BrowserRouter>
   );
 }
@@ -227,7 +246,9 @@ function AppInner() {
 function App() {
   return (
     <ThemeProvider>
-      <AppInner />
+      <TaskProvider>
+        <AppInner />
+      </TaskProvider>
     </ThemeProvider>
   );
 }
