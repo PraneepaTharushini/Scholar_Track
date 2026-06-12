@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTheme } from "../context/ThemeContext";
 import "../global.css";
 
 const Field = ({ label, name, type = "text", form, setForm }) => (
@@ -196,11 +197,10 @@ function ProfilePage({ user, onUpdateUser }) {
 
 const Toggle = ({ val, onChange }) => (
   <div
-    className="toggle"
-    style={{ backgroundColor: val ? "var(--primary)" : "var(--border)" }}
+    className={`custom-toggle ${val ? "on" : ""}`}
     onClick={() => onChange(!val)}
   >
-    <div className="toggle-thumb" style={{ transform: val ? "translateX(20px)" : "translateX(2px)" }} />
+    <div className="custom-toggle-thumb" style={{ transform: val ? "translateX(20px)" : "translateX(0)" }} />
   </div>
 );
 
@@ -217,7 +217,7 @@ const Row = ({ label, sub, val, onChange }) => (
 // ─── SETTINGS PAGE ────────────────────────────────────────────────────────────
 function SettingsPage() {
   const [notif, setNotif] = useState({ email: true, push: false, deadlineReminder: true, weeklyDigest: false });
-  const [prefs, setPrefs] = useState({ theme: "Light", language: "English", timezone: "UTC+5:30", dateFormat: "MM/DD/YYYY" });
+  const { theme, toggleTheme } = useTheme();
   const [privacy, setPrivacy] = useState({ shareAnalytics: true, publicProfile: false });
 
   return (
@@ -235,20 +235,21 @@ function SettingsPage() {
       {/* Preferences */}
       <div className="card">
         <h3 className="card-title">🎨 Preferences</h3>
-        <div className="grid-2">
-          {[
-            ["Theme",       "theme",      ["Light", "Dark", "System"]],
-            ["Language",    "language",   ["English", "Sinhala", "Tamil"]],
-            ["Timezone",    "timezone",   ["UTC+0", "UTC+5:30", "UTC+8", "UTC-5"]],
-            ["Date Format", "dateFormat", ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"]],
-          ].map(([label, key, options]) => (
-            <div className="field" key={key}>
-              <label className="field-label">{label}</label>
-              <select className="field-select" value={prefs[key]} onChange={(e) => setPrefs({ ...prefs, [key]: e.target.value })}>
-                {options.map((o) => <option key={o}>{o}</option>)}
-              </select>
-            </div>
-          ))}
+        <div className="field" style={{ maxWidth: '300px' }}>
+          <label className="field-label">Theme</label>
+          <select 
+            className="field-select" 
+            value={theme === "dark" ? "Dark" : "Light"} 
+            onChange={(e) => {
+              const val = e.target.value.toLowerCase();
+              if (val !== theme) {
+                toggleTheme();
+              }
+            }}
+          >
+            <option value="Light">Light</option>
+            <option value="Dark">Dark</option>
+          </select>
         </div>
       </div>
 
