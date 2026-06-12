@@ -87,8 +87,15 @@ const navItems = [
 const Sidebar = ({ isOpen, onClose }) => {
   return (
     <>
-      {isOpen && <div className="sidebar-backdrop" onClick={onClose} />}
-      <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+      {/* Backdrop — clicking closes sidebar on mobile */}
+      <div
+        className={`sidebar-backdrop ${isOpen ? 'visible' : ''}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      <aside className={`sidebar ${isOpen ? 'open' : ''}`} aria-label="Main navigation">
+        {/* Brand */}
         <div className="sidebar__brand">
           <div className="sidebar__brand-logo">
             <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
@@ -97,15 +104,21 @@ const Sidebar = ({ isOpen, onClose }) => {
             </svg>
           </div>
           <span className="sidebar__brand-name">Scholar Track</span>
-          <button className="sidebar__close-btn" onClick={onClose} aria-label="Close sidebar">✕</button>
+          <button className="sidebar__close-btn" onClick={onClose} aria-label="Close navigation">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </button>
         </div>
 
+        {/* Nav items */}
         <nav className="sidebar__nav">
           {navItems.map((item) => (
             <NavLink
               key={item.id}
               to={item.path}
               end={item.path === '/'}
+              data-label={item.label}
               className={({ isActive }) =>
                 `sidebar__nav-item${isActive ? ' sidebar__nav-item--active' : ''}`
               }
@@ -115,6 +128,11 @@ const Sidebar = ({ isOpen, onClose }) => {
             </NavLink>
           ))}
         </nav>
+
+        {/* Footer */}
+        <div className="sidebar__footer">
+          Scholar Track v1.0
+        </div>
       </aside>
     </>
   );

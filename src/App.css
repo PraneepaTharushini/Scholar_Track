@@ -1,3 +1,12 @@
+/* ================================================================
+   App.css — Scholar Track · Main Layout
+   
+   Breakpoints:
+   - ≥1024px (desktop):  persistent sidebar (260px) + main content
+   - 769–1023px (tablet): collapsed sidebar (72px, icon-only) + main
+   - ≤768px (mobile):    no sidebar offset, drawer opens over content
+   ================================================================ */
+
 .app-layout {
   display: flex;
   min-height: 100vh;
@@ -5,15 +14,17 @@
   transition: background 0.3s ease;
 }
 
+/* Main area sits beside the sidebar */
 .app-main {
   flex: 1;
-  margin-left: 260px;
+  margin-left: 260px;   /* equals sidebar width on desktop */
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   overflow-x: hidden;
   background: var(--bg-main);
-  transition: background 0.3s ease;
+  transition: margin-left 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              background 0.3s ease;
 }
 
 .app-content {
@@ -22,16 +33,37 @@
   padding: 28px 32px;
 }
 
+/* ── Tablet: sidebar is 72px collapsed ─────────────────────── */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .app-main {
+    margin-left: 72px;
+  }
+  .app-content {
+    padding: 22px 24px;
+  }
+}
+
+/* ── Mobile: full-width, sidebar is a drawer ───────────────── */
 @media (max-width: 768px) {
-  .app-main { margin-left: 0; }
-  .app-content { padding: 16px; }
+  .app-main {
+    margin-left: 0;
+  }
+  .app-content {
+    padding: 16px;
+  }
 }
 
 @media (max-width: 480px) {
-  .app-content { padding: 12px; }
+  .app-content {
+    padding: 12px;
+  }
 }
 
-/* ── Shared panel card ─────────────────────────────────────── */
+/* ================================================================
+   SHARED COMPONENTS
+   ================================================================ */
+
+/* ── Panel card ────────────────────────────────────────────── */
 .panel {
   background: var(--bg-card);
   border-radius: 14px;
@@ -55,6 +87,7 @@
   color: var(--text-primary);
 }
 
+/* ── Shared button ─────────────────────────────────────────── */
 .btn-primary {
   background: var(--primary);
   color: #fff;

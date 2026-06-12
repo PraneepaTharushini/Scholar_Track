@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "../global.css";
+import "./LoginPage.css";
 import { api } from "../services/api";
 
 export default function LoginPage({ onLogin }) {
@@ -38,62 +39,72 @@ export default function LoginPage({ onLogin }) {
   };
 
   return (
-    <div className="login-root">
+    <div className="lp-root">
 
-      {/* ── Left Panel ── */}
-      <div className="login-left">
-        <div className="login-left-inner">
-
-          <div className="login-logo">
-            <div className="login-logo-icon">✓</div>
-            <span className="login-logo-text">Scholar Track</span>
+      {/* ════════════════════════════════════════════════════════
+          LEFT PANEL — desktop only (≥ 860px)
+      ════════════════════════════════════════════════════════ */}
+      <div className="lp-left" aria-hidden="true">
+        <div className="lp-left-inner">
+          <div className="lp-logo">
+            <div className="lp-logo-icon">✓</div>
+            <span className="lp-logo-text">Scholar Track</span>
           </div>
-
           <div>
-            <h1 className="login-hero-heading">Your Academic<br />Journey, Organized.</h1>
-            <p className="login-hero-sub">
+            <h1 className="lp-hero-heading">Your Academic<br />Journey, Organized.</h1>
+            <p className="lp-hero-sub">
               Track tasks, review extracted assignments, and stay on top of every deadline — all in one place.
             </p>
           </div>
-
-          <div className="login-features">
+          <div className="lp-features">
             {["Smart deadline tracking", "Analytics & progress insights", "Review & manage tasks"].map((f, i) => (
-              <div key={i} className="login-feature-item">
-                <div className="login-feature-dot" />
-                <span className="login-feature-text">{f}</span>
+              <div key={i} className="lp-feature-item">
+                <div className="lp-feature-dot" />
+                <span className="lp-feature-text">{f}</span>
               </div>
             ))}
           </div>
-
-          <div className="login-version">v1.0.0</div>
+          <span className="lp-version">v1.0.0</span>
         </div>
       </div>
 
-      {/* ── Right Panel ── */}
-      <div className="login-right">
-        <div className="login-form-card">
+      {/* ════════════════════════════════════════════════════════
+          RIGHT PANEL — always visible
+      ════════════════════════════════════════════════════════ */}
+      <div className="lp-right">
 
-          <div>
-            <h2 className="login-form-title">
+        {/* Mobile-only brand header (hidden on desktop) */}
+        <div className="lp-mobile-brand">
+          <div className="lp-logo">
+            <div className="lp-logo-icon">✓</div>
+            <span className="lp-logo-text">Scholar Track</span>
+          </div>
+          <p className="lp-mobile-tagline">Your Academic Journey, Organized.</p>
+        </div>
+
+        {/* Form card */}
+        <div className="lp-form-card">
+          <div className="lp-form-header">
+            <h2 className="lp-form-title">
               {mode === "login" ? "Welcome back" : "Create an account"}
             </h2>
-            <p className="login-form-sub">
+            <p className="lp-form-sub">
               {mode === "login"
                 ? "Sign in to your student account"
                 : "Join Scholar Track for free"}
             </p>
           </div>
 
-          {error && <div className="login-error">{error}</div>}
+          {error && <div className="lp-error">{error}</div>}
 
           {/* Name — register only */}
           {mode === "register" && (
-            <div className="field">
-              <label className="field-label">Full Name</label>
-              <div className="login-input-wrap">
-                <span className="login-input-icon">👤</span>
+            <div className="lp-field">
+              <label className="lp-label">Full Name</label>
+              <div className="lp-input-wrap">
+                <span className="lp-input-icon">👤</span>
                 <input
-                  className="login-input"
+                  className="lp-input"
                   type="text"
                   placeholder="Your full name"
                   value={name}
@@ -105,12 +116,12 @@ export default function LoginPage({ onLogin }) {
           )}
 
           {/* Email */}
-          <div className="field">
-            <label className="field-label">Email address</label>
-            <div className="login-input-wrap">
-              <span className="login-input-icon">✉</span>
+          <div className="lp-field">
+            <label className="lp-label">Email address</label>
+            <div className="lp-input-wrap">
+              <span className="lp-input-icon">✉</span>
               <input
-                className="login-input"
+                className="lp-input"
                 type="email"
                 placeholder="student@university.edu"
                 value={email}
@@ -121,51 +132,52 @@ export default function LoginPage({ onLogin }) {
           </div>
 
           {/* Password */}
-          <div className="field">
-            <div className="login-label-row">
-              <label className="field-label">Password</label>
+          <div className="lp-field">
+            <div className="lp-label-row">
+              <label className="lp-label">Password</label>
               {mode === "login" && (
-                <span className="login-link">Forgot password?</span>
+                <span className="lp-link">Forgot password?</span>
               )}
             </div>
-            <div className="login-input-wrap">
-              <span className="login-input-icon">🔒</span>
+            <div className="lp-input-wrap">
+              <span className="lp-input-icon">🔒</span>
               <input
-                className="login-input"
+                className="lp-input"
                 type={showPassword ? "text" : "password"}
                 placeholder={mode === "register" ? "At least 6 characters" : "Enter your password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={handleKeyDown}
               />
-              <span className="login-eye-btn" onClick={() => setShowPassword(!showPassword)}>
+              <span className="lp-eye-btn" onClick={() => setShowPassword(!showPassword)}>
                 {showPassword ? "🙈" : "👁"}
               </span>
             </div>
           </div>
 
-          <button className="login-btn" onClick={handleSubmit} disabled={isLoading}>
+          {/* Submit */}
+          <button className="lp-btn" onClick={handleSubmit} disabled={isLoading}>
             {isLoading
               ? (mode === "login" ? "Signing in…" : "Creating account…")
               : (mode === "login" ? "Sign In" : "Create Account")}
           </button>
 
-          <p className="login-signup-text" style={{ textAlign: "center", marginTop: "1rem" }}>
+          {/* Switch mode */}
+          <p className="lp-switch">
             {mode === "login" ? (
               <>Don't have an account?{" "}
-                <span className="login-link" onClick={() => { setMode("register"); setError(""); }}>
+                <span className="lp-link" onClick={() => { setMode("register"); setError(""); }}>
                   Create one free
                 </span>
               </>
             ) : (
               <>Already have an account?{" "}
-                <span className="login-link" onClick={() => { setMode("login"); setError(""); }}>
+                <span className="lp-link" onClick={() => { setMode("login"); setError(""); }}>
                   Sign in
                 </span>
               </>
             )}
           </p>
-
         </div>
       </div>
     </div>

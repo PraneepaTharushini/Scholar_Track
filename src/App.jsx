@@ -137,10 +137,18 @@ const AppLayout = ({ user, onLogout, onUpdateUser }) => {
   const { theme, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Close sidebar on path changes
+  // Close sidebar whenever the route changes (mobile/tablet drawer)
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
+
+  // Close sidebar when screen grows to desktop size
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const handler = (e) => { if (e.matches) setSidebarOpen(false); };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   return (
     <div className="app-layout">
