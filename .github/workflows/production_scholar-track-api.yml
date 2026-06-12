@@ -24,27 +24,39 @@ jobs:
         with:
           python-version: '3.14'
 
-      # 🛠️ Local Build Section (Optional)
-      # The following section in your workflow is designed to catch build issues early on the client side, before deployment. This can be helpful for debugging and validation. However, if this step significantly increases deployment time and early detection is not critical for your workflow, you may remove this section to streamline the deployment process.
+      # 🛠️ Python Build Section
       - name: Create and Start virtual environment and Install dependencies
         run: |
           python -m venv antenv
           source antenv/bin/activate
           cd backend
           pip install -r requirements.txt
+
+      # ⚛️ NEW: Set up Node.js environment for React
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ⚛️ NEW: Build the React Frontend using Vite
+      - name: Build React Frontend
+        run: |
+          cd frontend
+          npm install
+          npm run build
+
+      # ⚛️ NEW: Move the built React files straight into the Flask folder
+      - name: Copy React Build to Flask Static Folder
+        run: |
+          mkdir -p backend/static
+          cp -r frontend/dist/* backend/static/
                 
-      # By default, when you enable GitHub CI/CD integration through the Azure portal, the platform automatically sets the SCM_DO_BUILD_DURING_DEPLOYMENT application setting to true. This triggers the use of Oryx, a build engine that handles application compilation and dependency installation (e.g., pip install) directly on the platform during deployment. Hence, we exclude the antenv virtual environment directory from the deployment artifact to reduce the payload size. 
+      # Upload the backend folder (which now safely holds your React frontend inside it!)
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
           name: python-app
           path: backend/
-
-      # 🚫 Opting Out of Oryx Build
-      # If you prefer to disable the Oryx build process during deployment, follow these steps:
-      # 1. Remove the SCM_DO_BUILD_DURING_DEPLOYMENT app setting from your Azure App Service Environment variables.
-      # 2. Refer to sample workflows for alternative deployment strategies: https://github.com/Azure/actions-workflow-samples/tree/master/AppService
-      
 
   deploy:
     runs-on: ubuntu-latest
@@ -72,4 +84,3 @@ jobs:
         with:
           app-name: 'scholar-track-api'
           slot-name: 'Production'
-          
