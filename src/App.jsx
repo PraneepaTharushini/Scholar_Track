@@ -58,13 +58,17 @@ function TasksPage() {
   const handleUpdate = async (updated) => {
     try {
       const { api } = await import('./services/api');
+      const full = updated.subjectFull ? updated.subjectFull.trim() : '';
+      const abbr = updated.subject ? updated.subject.trim() : '';
+      const subjectValue = (abbr && full && abbr !== full) ? `${abbr}|${full}` : (full || abbr);
       await api.updateTask(updated.id, {
         title: updated.title,
         description: updated.description,
         deadline: updated.deadline,
         category: updated.category,
         status: updated.status,
-        importance_override: updated.importance_override
+        importance_override: updated.importance_override,
+        subject: subjectValue
       });
       const freshList = await api.getTasks();
       setTasks(freshList);

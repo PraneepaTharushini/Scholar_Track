@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import './SystemInfo.css';
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = '/api';
 
 function StatusPill({ s }) {
   const cls = s === 'Active' || s === 'Optimal' ? 'green' : s === 'Inactive' ? 'red' : 'amber';

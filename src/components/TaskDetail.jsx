@@ -100,10 +100,12 @@ export default function TaskDetail({ task: initialTask, onBack, onUpdate, onDele
   };
 
   const handleEditSave = () => {
+    const full = editForm.subjectFull ? editForm.subjectFull.trim() : '';
+    const abbr = full.length <= 4 ? full.toUpperCase() : full.split(' ').map(w => w[0]).join('').slice(0, 4).toUpperCase();
     const updated = {
       ...task,
       ...editForm,
-      subject: editForm.subjectFull.split(' ').map(w => w[0]).join('').slice(0, 4),
+      subject: abbr,
     };
     setTask(updated);
     if (onUpdate) onUpdate(updated);
@@ -288,9 +290,13 @@ export default function TaskDetail({ task: initialTask, onBack, onUpdate, onDele
               <div className="td-form-row">
                 <div className="td-field">
                   <label className="td-field-label">Subject</label>
-                  <select className="td-field-select" name="subjectFull" value={editForm.subjectFull} onChange={handleEditChange}>
-                    {SUBJECTS.map(s => <option key={s}>{s}</option>)}
-                  </select>
+                  <input
+                    className="td-field-input"
+                    name="subjectFull"
+                    value={editForm.subjectFull}
+                    onChange={handleEditChange}
+                    placeholder="e.g. Database Systems, Math"
+                  />
                 </div>
                 <div className="td-field">
                   <label className="td-field-label">Deadline</label>

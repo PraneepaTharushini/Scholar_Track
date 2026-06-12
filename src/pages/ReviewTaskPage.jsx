@@ -304,16 +304,21 @@ const ReviewTaskPage = () => {
     setIsSaving(true);
     setSaveError('');
     try {
-      const payload = tasks.map((t) => ({
-        task_title:    t.taskTitle,
-        subject:       t.subject,
-        deadline:      t.deadline || null,
-        category:      t.category,
-        description:   t.description,
-        confidence:    t.confidence,
-        has_error:     t.hasError,
-        error_message: t.errorMessage || null,
-      }));
+      const payload = tasks.map((t) => {
+        const full = t.subject ? t.subject.trim() : '';
+        const abbr = full.length <= 4 ? full.toUpperCase() : full.split(' ').map(w => w[0]).join('').slice(0, 4).toUpperCase();
+        const subjectValue = (abbr && full && abbr !== full) ? `${abbr}|${full}` : (full || '');
+        return {
+          task_title:    t.taskTitle,
+          subject:       subjectValue,
+          deadline:      t.deadline || null,
+          category:      t.category,
+          description:   t.description,
+          confidence:    t.confidence,
+          has_error:     t.hasError,
+          error_message: t.errorMessage || null,
+        };
+      });
       await api.batchSaveTasks(payload);
       setSaveSuccess(true);
       clearReviewTasks();
