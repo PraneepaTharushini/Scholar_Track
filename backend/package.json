@@ -1,0 +1,17 @@
+{
+  "name": "scholar-track-backend",
+  "version": "1.0.0",
+  "description": "Scholar Track - Flask Backend & Priority Engine",
+  "private": true,
+  "scripts": {
+    "dev": "python scholar_track_priority/app.py",
+    "test": "python scholar_track_priority/tests/test_priority.py"
+  },
+  "keywords": [
+    "flask",
+    "backend",
+    "priority-engine"
+  ],
+  "author": "Scholar Track Team",
+  "license": "MIT"
+}

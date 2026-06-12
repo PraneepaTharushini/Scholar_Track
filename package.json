@@ -1,35 +1,26 @@
 {
-  "name": "scholar-track",
+  "name": "scholar-track-monorepo",
+  "version": "1.0.0",
+  "description": "Scholar Track - A comprehensive academic task management and priority system",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "frontend:dev": "npm run dev --prefix scholar-track-ui",
-    "frontend:build": "npm run build --prefix scholar-track-ui",
-    "frontend:lint": "npm run lint --prefix scholar-track-ui",
-    "frontend:preview": "npm run preview --prefix scholar-track-ui",
-    "backend:test": "python scholar_track_priority/tests/test_priority.py",
-    "backend:run": "python scholar_track_priority/app.py"
+    "dev": "npm run dev --workspace=frontend",
+    "build": "npm run build --workspace=frontend",
+    "lint": "npm run lint --workspace=frontend",
+    "preview": "npm run preview --workspace=frontend",
+    "backend:test": "python backend/scholar_track_priority/tests/test_priority.py",
+    "backend:dev": "python backend/scholar_track_priority/app.py"
   },
-  "dependencies": {
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-router-dom": "^7.13.1",
-    "recharts": "^3.8.0"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.39.4",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.0",
-    "eslint": "^9.39.4",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.4.0",
-    "vite": "^8.0.0"
-  }
+  "keywords": [
+    "academic",
+    "task-management",
+    "priority",
+    "scheduling"
+  ],
+  "author": "Scholar Track Team",
+  "license": "MIT"
 }

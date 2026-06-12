@@ -174,9 +174,9 @@ function App() {
     async function fetchData() {
       try {
         const [notifsRes, prefsRes, deadlinesRes] = await Promise.all([
-          fetch('http://localhost:3000/api/notifications'),
-          fetch('http://localhost:3000/api/reminders/preferences'),
-          fetch('http://localhost:3000/api/reminders/deadlines')
+          fetch('/api/notifications'),
+          fetch('/api/reminders/preferences'),
+          fetch('/api/reminders/deadlines')
         ]);
         const notifs = await notifsRes.json();
         const prefs = await prefsRes.json();
@@ -207,23 +207,23 @@ function App() {
 
   const dismiss = async id => {
     setItems(prev => prev.filter(n => n.id !== id));
-    await fetch(`http://localhost:3000/api/notifications/${id}`, { method: 'DELETE' });
+    await fetch(`/api/notifications/${id}`, { method: 'DELETE' });
   };
   
   const markAll = async () => {
     setItems(prev => prev.map(n => ({...n, is_unread:false})));
-    await fetch('http://localhost:3000/api/notifications/mark-all-read', { method: 'PATCH' });
+    await fetch('/api/notifications/mark-all-read', { method: 'PATCH' });
   };
   
   const markRead = async id => {
     setItems(prev => prev.map(n => n.id === id ? {...n, is_unread:false} : n));
-    await fetch(`http://localhost:3000/api/notifications/${id}/read`, { method: 'PATCH' });
+    await fetch(`/api/notifications/${id}/read`, { method: 'PATCH' });
   };
 
   const handleToggle = async (key) => {
     const current = toggles[key];
     setToggles(p => ({...p, [key]: !current}));
-    await fetch(`http://localhost:3000/api/reminders/preferences/${key}`, {
+    await fetch(`/api/reminders/preferences/${key}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_enabled: !current })

@@ -1180,3 +1180,95 @@ def get_system_activity_logs():
         })
     return jsonify(logs_list)
 
+# ---------------------------------------------------------------------------
+# Notification and Reminder Routes
+# ---------------------------------------------------------------------------
+
+@documents_bp.route("/notifications", methods=["GET"])
+def get_notifications():
+    query = "SELECT * FROM notifications ORDER BY created_at DESC"
+    with db.engine.connect() as conn:
+        rows = conn.execute(query).mappings().all()
+    
+    res = []
+    for r in rows:
+        res.append({
+            "id": r["id"],
+            "type": r["type"],
+            "icon": r["icon"],
+            "title": r["title"],
+            "message": r["message"],
+            "time_label": r["time_label"],
+            "is_unread": r["is_unread"],
+            "tags": r["tags"] or [],
+            "course": r["course"],
+            "deadline": r["deadline"]
+        })
+    return jsonify(res)
+
+@documents_bp.route("/reminders/preferences", methods=["GET"])
+def get_reminder_preferences():
+    query = "SELECT * FROM reminder_preferences ORDER BY id ASC"
+    with db.engine.connect() as conn:
+        rows = conn.execute(query).mappings().all()
+    
+    res = []
+    for r in rows:
+        res.append({
+            "id": r["id"],
+            "pref_key": r["pref_key"],
+            "label": r["label"],
+            "description": r["description"],
+            "is_enabled": r["is_enabled"]
+        })
+    return jsonify(res)
+
+@documents_bp.route("/reminders/deadlines", methods=["GET"])
+def get_reminder_deadlines():
+    query = "SELECT * FROM upcoming_deadlines ORDER BY sort_order ASC"
+    with db.engine.connect() as conn:
+        rows = conn.execute(query).mappings().all()
+    
+    res = []
+    for r in rows:
+        res.append({
+            "id": r["id"],
+            "title": r["title"],
+            "course": r["course"],
+            "deadline_time": r["deadline_time"],
+            "color": r["color"],
+            "urgency_label": r["urgency_label"]
+        })
+    return jsonify(res)
+
+@documents_bp.route("/notifications/<int:id>", methods=["DELETE"])
+def delete_notification(id: int):
+    query = "DELETE FROM notifications WHERE id = :id"
+    with db.engine.begin() as conn:
+        conn.execute(query, {"id": id})
+    return jsonify({"success": True})
+
+@documents_bp.route("/notifications/<int:id>/read", methods=["PATCH"])
+def read_notification(id: int):
+    query = "UPDATE notifications SET is_unread = False WHERE id = :id"
+    with db.engine.begin() as conn:
+        conn.execute(query, {"id": id})
+    return jsonify({"success": True})
+
+@documents_bp.route("/notifications/mark-all-read", methods=["PATCH"])
+def mark_all_notifications_read():
+    query = "UPDATE notifications SET is_unread = False"
+    with db.engine.begin() as conn:
+        conn.execute(query)
+    return jsonify({"success": True})
+
+@documents_bp.route("/reminders/preferences/<pref_key>", methods=["PATCH"])
+def update_reminder_preference(pref_key: str):
+    data = request.get_json(force=True) or {}
+    is_enabled = data.get("is_enabled", False)
+    query = "UPDATE reminder_preferences SET is_enabled = :is_enabled WHERE pref_key = :pref_key"
+    with db.engine.begin() as conn:
+        conn.execute(query, {"is_enabled": is_enabled, "pref_key": pref_key})
+    return jsonify({"success": True})
+
+
