@@ -7,7 +7,13 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "frontend:dev": "npm run dev --prefix scholar-track-ui",
+    "frontend:build": "npm run build --prefix scholar-track-ui",
+    "frontend:lint": "npm run lint --prefix scholar-track-ui",
+    "frontend:preview": "npm run preview --prefix scholar-track-ui",
+    "backend:test": "python scholar_track_priority/tests/test_priority.py",
+    "backend:run": "python scholar_track_priority/app.py"
   },
   "dependencies": {
     "react": "^19.2.4",

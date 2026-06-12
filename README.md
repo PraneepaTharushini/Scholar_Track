@@ -1,16 +1,20 @@
-# React + Vite
+# Scholar Track monorepo
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This repository keeps the frontend and backend side by side:
 
-Currently, two official plugins are available:
+- `scholar-track-ui/` - React + Vite frontend
+- `scholar_track_priority/` - Flask backend and priority module
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Run from the repo root
 
-## React Compiler
+```bash
+npm run frontend:dev
+npm run frontend:build
+npm run frontend:lint
+npm run backend:test
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Notes
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- Root `.gitignore` ignores `node_modules` recursively so installed packages stay out of git.
+- The backend module can also be run directly with `python scholar_track_priority/app.py`.
