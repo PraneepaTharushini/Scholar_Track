@@ -26,8 +26,9 @@ class QueryResult:
 
 
 class ConnectionContext:
-    def __init__(self, connection, commit_on_exit: bool = False) -> None:
+    def __init__(self, connection, pool=None, commit_on_exit: bool = False) -> None:
         self._connection = connection
+        self._pool = pool
         self._commit_on_exit = commit_on_exit
 
     def __enter__(self):
@@ -40,7 +41,10 @@ class ConnectionContext:
             elif exc_type is not None:
                 self._connection.rollback()
         finally:
-            self._connection.close()
+            if self._pool is not None:
+                self._pool.putconn(self._connection)
+            else:
+                self._connection.close()
 
     def execute(self, query, params=None):
         import re
@@ -58,14 +62,25 @@ class ConnectionContext:
 class DatabaseEngine:
     def __init__(self, database_uri: str) -> None:
         self.database_uri = database_uri
+        import psycopg2.pool
+        # Initialize thread-safe connection pool
+        self.pool = psycopg2.pool.ThreadedConnectionPool(
+            minconn=2,
+            maxconn=20,
+            dsn=database_uri,
+            sslmode="require"
+        )
 
     def connect(self):
-        connection = psycopg2.connect(self.database_uri, sslmode="require")
-        return ConnectionContext(connection, commit_on_exit=False)
+        connection = self.pool.getconn()
+        return ConnectionContext(connection, pool=self.pool, commit_on_exit=False)
 
     def begin(self):
-        connection = psycopg2.connect(self.database_uri, sslmode="require")
-        return ConnectionContext(connection, commit_on_exit=True)
+        connection = self.pool.getconn()
+        return ConnectionContext(connection, pool=self.pool, commit_on_exit=True)
+
+    def close(self):
+        self.pool.closeall()
 
 
 class Database:
