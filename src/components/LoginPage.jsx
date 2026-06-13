@@ -2,6 +2,7 @@ import { useState } from "react";
 import "../global.css";
 import "./LoginPage.css";
 import { api } from "../services/api";
+import logoSvg from "../assets/logo.svg";
 
 export default function LoginPage({ onLogin }) {
   const [mode, setMode] = useState("login"); // 'login' | 'register'
@@ -47,7 +48,9 @@ export default function LoginPage({ onLogin }) {
       <div className="lp-left" aria-hidden="true">
         <div className="lp-left-inner">
           <div className="lp-logo">
-            <div className="lp-logo-icon">✓</div>
+            <div className="lp-logo-icon">
+              <img src={logoSvg} alt="Scholar Track Logo" style={{ width: '64px', height: '64px', objectFit: 'contain' }} />
+            </div>
             <span className="lp-logo-text">Scholar Track</span>
           </div>
           <div>
@@ -76,7 +79,9 @@ export default function LoginPage({ onLogin }) {
         {/* Mobile-only brand header (hidden on desktop) */}
         <div className="lp-mobile-brand">
           <div className="lp-logo">
-            <div className="lp-logo-icon">✓</div>
+            <div className="lp-logo-icon">
+              <img src={logoSvg} alt="Scholar Track Logo" style={{ width: '64px', height: '64px', objectFit: 'contain' }} />
+            </div>
             <span className="lp-logo-text">Scholar Track</span>
           </div>
           <p className="lp-mobile-tagline">Your Academic Journey, Organized.</p>

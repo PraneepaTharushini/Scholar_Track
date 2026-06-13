@@ -28,7 +28,7 @@
 .sidebar__brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
   padding: 24px 20px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
   margin-bottom: 8px;
@@ -42,16 +42,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  filter: drop-shadow(0 2px 8px rgba(79,70,229,0.5));
-  width: 28px;
-  height: 28px;
+  background: transparent;
+  width: 44px;
+  height: 44px;
 }
 
 .sidebar__brand-name {
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 700;
   color: #FFFFFF;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.5px;
   white-space: nowrap;
   opacity: 1;
   transition: opacity 0.2s ease 0.05s;
