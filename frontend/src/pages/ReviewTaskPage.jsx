@@ -45,16 +45,11 @@ const PriorityBadge = ({ priority }) => {
 };
 
 // ── Deadline year helpers ───────────────────────────────────
-/**
- * Given a date string like "202601-05-19" or "20260-05-19",
- * truncate the year to at most 4 digits and return a clean value.
- * Returns '' if the input is falsy.
- */
 function sanitizeDeadline(val) {
   if (!val) return '';
   const parts = val.split('-');
   if (parts.length < 1) return val;
-  const year = parts[0].slice(0, 4); // cap year to 4 digits
+  const year = parts[0].slice(0, 4);
   parts[0] = year;
   return parts.join('-');
 }
@@ -139,25 +134,21 @@ const TaskCard = ({ task, index, onChange, onRemove }) => {
                 onChange={(e) => {
                   const raw = e.target.value;
                   const clean = sanitizeDeadline(raw);
-                  // Reject if the year is still > 4 digits after sanitize (shouldn't happen, safety net)
                   if (clean) {
                     const year = parseInt(clean.split('-')[0], 10);
                     if (year < 2000 || year > 9999) return;
                   }
                   handleChange('deadline', clean);
-                  // Auto-update priority whenever deadline changes
                   handleChange('priority', computePriority(clean));
                   if (clean) handleChange('hasError', false);
                 }}
                 onBlur={(e) => {
-                  // Sanitize on blur to catch paste / autofill edge-cases
                   const clean = sanitizeDeadline(e.target.value);
                   if (clean !== task.deadline) {
                     handleChange('deadline', clean);
                   }
                 }}
                 onKeyDown={(e) => {
-                  // Fast-path: prevent typing a 5th digit in the year portion
                   const val = task.deadline || '';
                   const year = val.split('-')[0] || '';
                   if (year.length >= 4 && /[0-9]/.test(e.key) && e.target.selectionStart < 4) {
@@ -187,7 +178,6 @@ const TaskCard = ({ task, index, onChange, onRemove }) => {
               Priority
               <span style={{marginLeft: '6px', fontSize: '10px', opacity: 0.55, fontWeight: 400}}>(auto)</span>
             </label>
-            {/* Read-only: priority is derived automatically from the deadline */}
             <div className={`form-select priority-select priority-select--${(task.priority || 'low').toLowerCase()}`}
               style={{cursor: 'default', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '6px'}}>
               <span style={{width: 8, height: 8, borderRadius: '50%', display: 'inline-block', background: 'currentColor', opacity: 0.8}} />
@@ -239,7 +229,8 @@ const TaskCard = ({ task, index, onChange, onRemove }) => {
 // ── Review Task Page ─────────────────────────────────────────
 const ReviewTaskPage = () => {
   const navigate = useNavigate();
-  const { reviewTasks, uploadMeta, clearReviewTasks } = useTaskContext();
+  // ✅ Pull in commitReviewTasks from context
+  const { reviewTasks, uploadMeta, clearReviewTasks, commitReviewTasks } = useTaskContext();
 
   const [tasks, setTasks] = useState([]);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -319,10 +310,13 @@ const ReviewTaskPage = () => {
           error_message: t.errorMessage || null,
         };
       });
+
       await api.batchSaveTasks(payload);
+
+      // ✅ Commit tasks into the frontend task list so Tasks page shows them
+      commitReviewTasks(tasks);
+
       setSaveSuccess(true);
-      clearReviewTasks();
-      setTasks([]);
       setTimeout(() => {
         setSaveSuccess(false);
         navigate('/tasks');

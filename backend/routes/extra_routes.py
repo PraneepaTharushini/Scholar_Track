@@ -17,14 +17,13 @@ analytics_bp = Blueprint("analytics", __name__)
 
 def get_current_user_id() -> int | None:
     """Extract authenticated student_id (user_id) from the request."""
-    # Look for X-Student-ID, query param, or Bearer token
     sid = request.headers.get("X-Student-ID")
     if not sid:
         sid = request.args.get("student_id")
     if not sid:
         auth_header = request.headers.get("Authorization", "")
         if auth_header.lower().startswith("bearer "):
-            sid = auth_header.split(None, 1)[1].strip()
+            sid = auth_header[7:].strip()  # ✅ correctly strips "Bearer " prefix
     if sid and sid.isdigit():
         return int(sid)
     return None
@@ -57,14 +56,12 @@ def register():
     p_hash = hashlib.sha256(password.encode()).hexdigest()
     now = datetime.utcnow()
 
-    # Check if user already exists
     check_query = "SELECT id FROM users WHERE email = :email"
     with db.engine.connect() as conn:
         existing = conn.execute(check_query, {"email": email}).mappings().first()
         if existing:
             return jsonify({"error": "User with this email already exists"}), 409
 
-    # Insert user
     insert_query = """
         INSERT INTO users (email, password_hash, name, role, status, created_at)
         VALUES (:email, :password_hash, :name, 'student', 'active', :created_at)
@@ -166,17 +163,13 @@ def map_subject(val):
 @tasks_bp.route("", methods=["GET"])
 @require_auth
 def get_tasks(user_id: int):
-    # Fetch and recalculate rankings to serve updated priority scores
     pending = get_pending_tasks(user_id)
     completed = get_completed_tasks(user_id)
     ranked = rank_tasks(pending, completed)
 
-    # Persist the recalculated scores/quadrants to DB in batch
     save_priority_scores_batch(ranked, pending)
 
-    # Combine ranked pending + completed for a full response
     full_list = []
-    # 1. Pending tasks sorted by rank
     for t in ranked:
         subj_abbr, subj_full = map_subject(t.get("subject"))
         full_list.append({
@@ -200,7 +193,6 @@ def get_tasks(user_id: int):
                 "recommended": t.get("quadrant", "SCHEDULE")
             }
         })
-    # 2. Completed tasks
     for t in completed:
         subj_abbr, subj_full = map_subject(t.get("subject"))
         full_list.append({
@@ -239,7 +231,6 @@ def create_task(user_id: int):
 
     now = datetime.utcnow()
 
-    # Insert task
     insert_query = """
         INSERT INTO tasks (user_id, task_title, description, deadline, category, status, confidence, has_error, created_at, updated_at, subject)
         VALUES (:user_id, :task_title, :description, :deadline, :category, 'pending', 100, False, :created_at, :updated_at, :subject)
@@ -258,7 +249,6 @@ def create_task(user_id: int):
         }).mappings().first()
         task_id = res["id"]
 
-    # Calculate initial scores
     pending = get_pending_tasks(user_id)
     completed = get_completed_tasks(user_id)
     ranked = rank_tasks(pending, completed)
@@ -279,9 +269,7 @@ def update_task(user_id: int, id: int):
     subject = data.get("subject")
 
     now = datetime.utcnow()
-    completed_at = now if status == "completed" else None
 
-    # Update columns dynamically based on fields provided
     update_parts = []
     params = {"id": id, "user_id": user_id, "updated_at": now}
 
@@ -323,7 +311,6 @@ def update_task(user_id: int, id: int):
     with db.engine.begin() as conn:
         conn.execute(query, params)
 
-    # Recalculate priority scores
     pending = get_pending_tasks(user_id)
     completed = get_completed_tasks(user_id)
     ranked = rank_tasks(pending, completed)
@@ -386,7 +373,6 @@ def batch_save_tasks(user_id: int):
                 "updated_at": now
             })
 
-    # Trigger priority scoring for new tasks
     pending = get_pending_tasks(user_id)
     completed = get_completed_tasks(user_id)
     ranked = rank_tasks(pending, completed)
@@ -506,7 +492,6 @@ def get_analytics_all(user_id: int):
     pending = get_pending_tasks(user_id)
     completed = get_completed_tasks(user_id)
 
-    # 1. Summary
     total = len(pending) + len(completed)
     overdue_count = 0
     now = date.today()
@@ -527,7 +512,6 @@ def get_analytics_all(user_id: int):
         "overdue": overdue_count
     }
 
-    # 2. Status
     ranked = rank_tasks(pending, completed)
     quadrants = {"DO FIRST": 0, "SCHEDULE": 0, "DELEGATE": 0, "ELIMINATE": 0}
     for t in ranked:
@@ -543,14 +527,12 @@ def get_analytics_all(user_id: int):
         {"label": "Eliminate", "value": quadrants["ELIMINATE"], "pct": round((quadrants["ELIMINATE"] / total_ranked) * 100), "color": "#10B981"}
     ]
 
-    # 3. Categories
     cat_counts = {}
     for t in pending + completed:
         cat = t.get("category") or "Other"
         cat_counts[cat] = cat_counts.get(cat, 0) + 1
     cat_list = [{"label": k, "count": v} for k, v in cat_counts.items()]
 
-    # 4. Insights
     if not completed:
         insights = [
             "Add and complete more tasks to unlock personalized habit analysis!",
@@ -620,19 +602,16 @@ def upload_document():
     if file.filename == "":
         return jsonify({"error": "No file selected for uploading"}), 400
     
-    # Ensure upload folder exists
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)
         
     filename = file.filename
-    # Generate unique path to avoid collisions
     doc_id = str(uuid.uuid4())
     ext = os.path.splitext(filename)[1]
     saved_name = f"{doc_id}{ext}"
     filepath = os.path.join(UPLOAD_FOLDER, saved_name)
     file.save(filepath)
     
-    # Save document record in PostgreSQL database
     query = """
         INSERT INTO documents (id, filename, status, path, created_at)
         VALUES (:id, :filename, :status, :path, :created_at)
@@ -661,7 +640,6 @@ def get_task_details():
     if not filename:
         return jsonify({"error": "Missing filename"}), 400
         
-    # Query database to find the latest document record with this filename to get its path
     query = """
         SELECT path FROM documents 
         WHERE filename = :filename 
@@ -674,7 +652,6 @@ def get_task_details():
         if row:
             filepath = row["path"]
             
-    # Read text content from the file if available
     extracted_text = ""
     if filepath and os.path.exists(filepath):
         _, ext = os.path.splitext(filepath)
@@ -687,19 +664,17 @@ def get_task_details():
                 from pypdf import PdfReader
                 reader = PdfReader(filepath)
                 text_pages = []
-                for page in reader.pages[:5]:  # Process up to 5 pages
+                for page in reader.pages[:5]:
                     text_pages.append(page.extract_text() or "")
                 extracted_text = "\n".join(text_pages)
         except Exception as e:
             print(f"Error reading file content during task extraction: {e}")
             
-    # If we failed to extract text but have the file, we can fall back to filename keyword parsing
     text_to_analyze = extracted_text if extracted_text.strip() else filename
     text_lower = text_to_analyze.lower()
     
     tasks = []
     
-    # 1. Database course document detection
     if "cs3042" in text_lower or "database" in text_lower or "dbms" in text_lower:
         tasks = [
             {
@@ -708,9 +683,7 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=10)).strftime("%Y-%m-%d"),
                 "category": "Project",
                 "description": "Identify entities, attributes, primary keys, and relationships. Draw ER diagram as specified in the course outline.",
-                "ai_analysis": {
-                    "recommended_priority": "High"
-                },
+                "ai_analysis": {"recommended_priority": "High"},
                 "confidence": 94
             },
             {
@@ -719,9 +692,7 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=5)).strftime("%Y-%m-%d"),
                 "category": "Assignment",
                 "description": "Solve SQL query sheet questions using joins, subqueries, and grouping.",
-                "ai_analysis": {
-                    "recommended_priority": "Medium"
-                },
+                "ai_analysis": {"recommended_priority": "Medium"},
                 "confidence": 92
             },
             {
@@ -730,14 +701,10 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=20)).strftime("%Y-%m-%d"),
                 "category": "Exam",
                 "description": "Midterm preparation covering normalisation, indexing, ER modeling, and SQL.",
-                "ai_analysis": {
-                    "recommended_priority": "High"
-                },
+                "ai_analysis": {"recommended_priority": "High"},
                 "confidence": 95
             }
         ]
-        
-    # 2. Unix / Shell Programming course document detection
     elif "unix" in text_lower or "shell programming" in text_lower or "os_project" in text_lower:
         tasks = [
             {
@@ -746,9 +713,7 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=4)).strftime("%Y-%m-%d"),
                 "category": "Lab",
                 "description": "Create OS_Project directory structure (src, docs, backup, scripts), copy text files, and compress directory.",
-                "ai_analysis": {
-                    "recommended_priority": "Medium"
-                },
+                "ai_analysis": {"recommended_priority": "Medium"},
                 "confidence": 95
             },
             {
@@ -757,9 +722,7 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d"),
                 "category": "Lab",
                 "description": "Write shell scripts to concatenate strings, compare strings, and find the maximum among three numbers.",
-                "ai_analysis": {
-                    "recommended_priority": "Medium"
-                },
+                "ai_analysis": {"recommended_priority": "Medium"},
                 "confidence": 90
             },
             {
@@ -768,14 +731,10 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=10)).strftime("%Y-%m-%d"),
                 "category": "Lab",
                 "description": "Generate the Fibonacci series for n terms and create a menu-driven arithmetic calculator using case statements.",
-                "ai_analysis": {
-                    "recommended_priority": "High"
-                },
+                "ai_analysis": {"recommended_priority": "High"},
                 "confidence": 92
             }
         ]
-        
-    # 3. Watchdog scenario / Operating Systems assignment detection
     elif "watchdog" in text_lower or "is4103" in text_lower or "signal handling" in text_lower or "fork" in text_lower:
         tasks = [
             {
@@ -784,14 +743,10 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d"),
                 "category": "Assignment",
                 "description": "Write a C program that forks into a Parent (Watchdog) and Child (Worker) to forcefully terminate hanging workers using signals.",
-                "ai_analysis": {
-                    "recommended_priority": "High"
-                },
+                "ai_analysis": {"recommended_priority": "High"},
                 "confidence": 96
             }
         ]
-        
-    # 4. Physics / Lab document fallback
     elif "phy1012" in text_lower or "physics" in text_lower:
         tasks = [
             {
@@ -800,9 +755,7 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=4)).strftime("%Y-%m-%d"),
                 "category": "Lab",
                 "description": "Submit lab observations, graph, and error calculation for pendulum experiment.",
-                "ai_analysis": {
-                    "recommended_priority": "Medium"
-                },
+                "ai_analysis": {"recommended_priority": "Medium"},
                 "confidence": 90
             },
             {
@@ -811,14 +764,10 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d"),
                 "category": "Quiz",
                 "description": "MCQ test on mechanics and thermodynamics.",
-                "ai_analysis": {
-                    "recommended_priority": "Low"
-                },
+                "ai_analysis": {"recommended_priority": "Low"},
                 "confidence": 85
             }
         ]
-        
-    # 5. Math / Mathematics detection
     elif "mat2012" in text_lower or "math" in text_lower or "linear algebra" in text_lower:
         tasks = [
             {
@@ -827,9 +776,7 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=6)).strftime("%Y-%m-%d"),
                 "category": "Assignment",
                 "description": "Solve problems 1-15 on matrix inversion and system of linear equations.",
-                "ai_analysis": {
-                    "recommended_priority": "Medium"
-                },
+                "ai_analysis": {"recommended_priority": "Medium"},
                 "confidence": 94
             },
             {
@@ -838,14 +785,10 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=15)).strftime("%Y-%m-%d"),
                 "category": "Exam",
                 "description": "Revision exam on differentiation and integration techniques.",
-                "ai_analysis": {
-                    "recommended_priority": "High"
-                },
+                "ai_analysis": {"recommended_priority": "High"},
                 "confidence": 91
             }
         ]
-        
-    # 6. General text parsing fallback
     else:
         clean_lines = [line.strip() for line in extracted_text.splitlines() if line.strip()]
         snippet = ""
@@ -863,9 +806,7 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d"),
                 "category": "Assignment",
                 "description": f"Content summary: {snippet}" if snippet else f"Extracted tasks from document: {filename}",
-                "ai_analysis": {
-                    "recommended_priority": "Low"
-                },
+                "ai_analysis": {"recommended_priority": "Low"},
                 "confidence": 85
             }
         ]
@@ -913,11 +854,8 @@ def get_admin_users():
 
 @documents_bp.route("/users/stats", methods=["GET"])
 def get_users_stats():
-    # 1. Total users
     q1 = "SELECT COUNT(*) as cnt FROM users"
-    # 2. Active users
     q2 = "SELECT COUNT(*) as cnt FROM users WHERE status = 'Active' OR is_active = true"
-    # 3. Tasks created
     q3 = "SELECT COUNT(*) as cnt FROM tasks"
     
     with db.engine.connect() as conn:
@@ -942,19 +880,16 @@ def admin_create_user():
     if not name or not email:
         return jsonify({"error": "Missing name or email"}), 400
         
-    # Check if user already exists
     check_query = "SELECT id FROM users WHERE email = :email"
     with db.engine.connect() as conn:
         existing = conn.execute(check_query, {"email": email}).mappings().first()
         if existing:
             return jsonify({"error": "User with this email already exists"}), 409
 
-    # Generate a temporary password hash
     p_hash = hashlib.sha256("password".encode()).hexdigest()
     now = datetime.utcnow()
     is_active = (status == "Active")
     
-    # We can get next ID to construct a user_code
     with db.engine.connect() as conn:
         count_res = conn.execute("SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM users").mappings().first()
         next_id = count_res["next_id"]
@@ -1021,7 +956,6 @@ def admin_update_user(id):
         
     log_activity(f"Admin updated user: {name} details", color="#6366f1")
     
-    # Fetch updated user to return
     with db.engine.connect() as conn:
         row = conn.execute("SELECT id, email, name, role, status, is_active, created_at, user_code FROM users WHERE id = :id", {"id": id}).mappings().first()
         
@@ -1044,7 +978,6 @@ def admin_toggle_user_status(id):
     status = data.get("status", "Active")
     is_active = (status == "Active")
     
-    # Fetch name first for logging
     with db.engine.connect() as conn:
         user = conn.execute("SELECT name FROM users WHERE id = :id", {"id": id}).mappings().first()
     
@@ -1070,7 +1003,6 @@ def admin_toggle_user_status(id):
 
 @documents_bp.route("/users/<int:id>", methods=["DELETE"])
 def admin_delete_user(id):
-    # Fetch name first for logging
     with db.engine.connect() as conn:
         user = conn.execute("SELECT name FROM users WHERE id = :id", {"id": id}).mappings().first()
     
@@ -1097,7 +1029,6 @@ def get_system_metrics():
         row = conn.execute(query).mappings().first()
         
     if not row:
-        # Fallback values if database table is empty
         return jsonify({
             "cpu_pct": 12.5,
             "memory_pct": 42.1,
@@ -1156,7 +1087,6 @@ def get_system_ocr_stats():
         })
         
     if not stats_list:
-        # Return fallback data if table is empty
         stats_list = [
             {"doc_type": "PDF Documents", "processed": 1240, "success_rate": 98.5, "avg_time_sec": 1.2, "status": "Optimal"},
             {"doc_type": "Text Files", "processed": 845, "success_rate": 100.0, "avg_time_sec": 0.2, "status": "Optimal"},
@@ -1179,4 +1109,3 @@ def get_system_activity_logs():
             "created_at": r["created_at"].isoformat() if r["created_at"] else ""
         })
     return jsonify(logs_list)
-
