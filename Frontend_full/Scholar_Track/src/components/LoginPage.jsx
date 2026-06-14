@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "../global.css";
 import { api } from "../services/api";
 
-export default function LoginPage({ onLogin }) {
-  const [mode, setMode] = useState("login");
+const normalizeMode = (mode) => (
+  ["login", "register", "forgot"].includes(mode) ? mode : "login"
+);
+
+export default function LoginPage({ onLogin, initialMode = "login", onModeChange }) {
+  const [mode, setMode] = useState(normalizeMode(initialMode));
   const [resetStep, setResetStep] = useState("request");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -27,10 +31,25 @@ export default function LoginPage({ onLogin }) {
     setMessage("");
   };
 
+  useEffect(() => {
+    setMode(normalizeMode(initialMode));
+    setResetStep("request");
+    setName("");
+    setCode("");
+    setPassword("");
+    setConfirmPassword("");
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    setError("");
+    setMessage("");
+  }, [initialMode]);
+
   const switchMode = (nextMode) => {
-    setMode(nextMode);
+    const normalizedMode = normalizeMode(nextMode);
+    setMode(normalizedMode);
     setResetStep("request");
     resetFormState();
+    onModeChange?.(normalizedMode);
   };
 
   const requestResetCode = async () => {
