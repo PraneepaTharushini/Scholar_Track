@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import LoginPage from './components/LoginPage';
@@ -26,6 +26,12 @@ const PAGE_TITLES = {
   '/notifications': 'Notifications',
   '/system': 'System Info',
   '/settings': 'Settings',
+};
+
+const AUTH_PATHS = {
+  login: '/login',
+  register: '/register',
+  forgot: '/forgot-password',
 };
 
 function TasksPage() {
@@ -88,13 +94,46 @@ const AppLayout = ({ user, onLogout }) => {
   );
 };
 
+const RequireAuth = ({ user, children }) => {
+  const location = useLocation();
+
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  return children;
+};
+
+const PublicAuthPage = ({ user, mode, onLogin }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
+
+  const handleLogin = (nextUser) => {
+    onLogin(nextUser);
+    const from = location.state?.from?.pathname || '/';
+    navigate(from, { replace: true });
+  };
+
+  const handleModeChange = (nextMode) => {
+    navigate(AUTH_PATHS[nextMode] || AUTH_PATHS.login);
+  };
+
+  return <LoginPage initialMode={mode} onModeChange={handleModeChange} onLogin={handleLogin} />;
+};
+
 function AppInner() {
   const [user, setUser] = useState(null);
   const [checkingSession, setCheckingSession] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     import('./services/api').then(async ({ api }) => {
-      if (!api.hasToken()) {
+      if (!api.hasValidToken()) {
+        api.clearToken();
         setCheckingSession(false);
         return;
       }
@@ -110,30 +149,49 @@ function AppInner() {
     });
   }, []);
 
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      setUser(null);
+      navigate('/login', { replace: true });
+    };
+
+    window.addEventListener('scholar-track-auth-expired', handleAuthExpired);
+    return () => window.removeEventListener('scholar-track-auth-expired', handleAuthExpired);
+  }, [navigate]);
+
   const handleLogout = () => {
     import('./services/api').then(({ api }) => api.clearToken());
     setUser(null);
+    navigate('/login', { replace: true });
   };
 
   if (checkingSession) {
     return <div className="app-loading">Loading Scholar Track...</div>;
   }
 
-  if (!user) {
-    return <LoginPage onLogin={setUser} />;
-  }
-
   return (
-    <BrowserRouter>
-      <AppLayout user={user} onLogout={handleLogout} />
-    </BrowserRouter>
+    <Routes>
+      <Route path="/login" element={<PublicAuthPage user={user} mode="login" onLogin={setUser} />} />
+      <Route path="/register" element={<PublicAuthPage user={user} mode="register" onLogin={setUser} />} />
+      <Route path="/forgot-password" element={<PublicAuthPage user={user} mode="forgot" onLogin={setUser} />} />
+      <Route
+        path="/*"
+        element={(
+          <RequireAuth user={user}>
+            <AppLayout user={user} onLogout={handleLogout} />
+          </RequireAuth>
+        )}
+      />
+    </Routes>
   );
 }
 
 function App() {
   return (
     <ThemeProvider>
-      <AppInner />
+      <BrowserRouter>
+        <AppInner />
+      </BrowserRouter>
     </ThemeProvider>
   );
 }
