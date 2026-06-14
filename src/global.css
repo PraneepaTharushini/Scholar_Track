@@ -695,3 +695,77 @@ body {
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border);
 }
+
+/* ============================================================
+   MOBILE RESPONSIVE ADDITIONS
+   ============================================================ */
+
+@media (max-width: 768px) {
+  /* Profile & Settings pages — reduce padding */
+  .profile-page,
+  .settings-page {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  /* Profile stat row — wrap and left-align on mobile */
+  .profile-stat-row {
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-left: 0;
+    width: 100%;
+    margin-top: 12px;
+  }
+
+  .profile-stat { text-align: left; }
+
+  /* Profile avatar section — reduce padding */
+  .profile-avatar-section {
+    padding: 18px;
+    gap: 16px;
+  }
+
+  /* Danger and export rows — stack on mobile */
+  .danger-row,
+  .export-row,
+  .sec-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  /* Settings row — stack label and control */
+  .settings-row {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  /* Card — reduce padding */
+  .card {
+    padding: 18px;
+  }
+
+  /* Info box — smaller on mobile */
+  .info-box {
+    font-size: 12px;
+  }
+
+  /* Login form card max width on mobile */
+  .login-form-card {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-page,
+  .settings-page {
+    padding: 12px;
+  }
+
+  .profile-name { font-size: 18px; }
+  .profile-avatar { width: 64px; height: 64px; font-size: 26px; }
+
+  .card {
+    padding: 14px;
+  }
+}

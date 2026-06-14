@@ -50,12 +50,15 @@
   }
   .app-content {
     padding: 16px;
+    /* Reserve space for mobile bottom nav */
+    padding-bottom: calc(16px + 64px + env(safe-area-inset-bottom, 0px));
   }
 }
 
 @media (max-width: 480px) {
   .app-content {
     padding: 12px;
+    padding-bottom: calc(12px + 64px + env(safe-area-inset-bottom, 0px));
   }
 }
 
