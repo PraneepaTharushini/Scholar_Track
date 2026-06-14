@@ -1,7 +1,46 @@
 const BASE_URL = '/api';
+const AUTH_EXPIRED_EVENT = 'scholar-track-auth-expired';
 
 function getToken() {
   return localStorage.getItem('scholar_track_token');
+}
+
+function clearToken() {
+  localStorage.removeItem('scholar_track_token');
+}
+
+function decodeJwtPayload(token) {
+  const payload = token?.split('.')?.[1];
+  if (!payload) return null;
+
+  try {
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const paddedBase64 = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+    const json = decodeURIComponent(
+      atob(paddedBase64)
+        .split('')
+        .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, '0')}`)
+        .join(''),
+    );
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+function isTokenExpired(token) {
+  const payload = decodeJwtPayload(token);
+  if (!payload?.exp) return true;
+  return payload.exp * 1000 <= Date.now();
+}
+
+function hasValidToken() {
+  const token = getToken();
+  return !!token && !isTokenExpired(token);
+}
+
+function notifyAuthExpired() {
+  window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
 }
 
 function buildHeaders(auth = true) {
@@ -14,6 +53,12 @@ function buildHeaders(auth = true) {
 }
 
 async function request(method, path, body = null, auth = true) {
+  if (auth && !hasValidToken()) {
+    clearToken();
+    notifyAuthExpired();
+    throw new Error('Your session has expired. Please sign in again.');
+  }
+
   const opts = { method, headers: buildHeaders(auth) };
   if (body) opts.body = JSON.stringify(body);
 
@@ -22,6 +67,11 @@ async function request(method, path, body = null, auth = true) {
   const data = contentType.includes('application/json')
     ? await res.json()
     : { error: `Expected JSON from ${path}, but the server returned ${res.status}.` };
+
+  if (res.status === 401) {
+    clearToken();
+    notifyAuthExpired();
+  }
 
   if (!res.ok) throw new Error(data.error || `API error ${res.status}`);
   return data;
@@ -65,6 +115,8 @@ export const api = {
   getTimeline: () => request('GET', '/analytics/timeline'),
 
   setToken: (token) => localStorage.setItem('scholar_track_token', token),
-  clearToken: () => localStorage.removeItem('scholar_track_token'),
-  hasToken: () => !!localStorage.getItem('scholar_track_token'),
+  clearToken,
+  hasToken: () => !!getToken(),
+  hasValidToken,
+  authExpiredEvent: AUTH_EXPIRED_EVENT,
 };
