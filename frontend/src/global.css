@@ -360,16 +360,10 @@ body {
 }
 
 .login-logo-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background-color: var(--purple);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--white);
-  font-weight: bold;
-  font-size: 18px;
+  width: 40px;
+  height: 40px;
+  background: none;
+  display: block;
 }
 
 .login-logo-text { color: var(--white); font-size: 20px; font-weight: 700; }
