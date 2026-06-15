@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import './Sidebar.css';
+import logoSvg from '../assets/logo.svg';
 
 const navItems = [
   {
@@ -91,10 +92,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
         <div className="sidebar__brand">
           <div className="sidebar__brand-logo">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <rect width="28" height="28" rx="8" fill="#4F46E5"/>
-              <path d="M7 14L11 18L21 10" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <img src={logoSvg} alt="Scholar Track Logo" width="60" height="60" style={{ objectFit: 'contain' }} />
           </div>
           <span className="sidebar__brand-name">Scholar Track</span>
           <button className="sidebar__close-btn" onClick={onClose} aria-label="Close sidebar">✕</button>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import "../global.css";
 import { api } from "../services/api";
+import logoSvg from "../assets/logo.svg";
 
 export default function LoginPage({ onLogin }) {
   const [mode, setMode] = useState("login"); // 'login' | 'register'
@@ -45,7 +46,7 @@ export default function LoginPage({ onLogin }) {
         <div className="login-left-inner">
 
           <div className="login-logo">
-            <div className="login-logo-icon">✓</div>
+            <img src={logoSvg} alt="Scholar Track Logo" className="login-logo-icon" style={{ width: 56, height: 56, objectFit: 'contain' }} />
             <span className="login-logo-text">Scholar Track</span>
           </div>
 
