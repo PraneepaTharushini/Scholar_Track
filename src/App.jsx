@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -31,26 +31,30 @@ const PAGE_TITLES = {
 };
 
 /* ── Task page with detail view ──────────────────────────── */
-
 function TasksPage() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState(null);
+  const location = useLocation();
 
-  useEffect(() => {
-    const loadTasks = async () => {
-      try {
-        const { api } = await import('./services/api');
-        const list = await api.getTasks();
-        setTasks(list);
-      } catch (err) {
-        console.error('Failed to load tasks:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadTasks();
+  // ✅ Extract loadTasks so it can be called on every visit to /tasks
+  const loadTasks = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { api } = await import('./services/api');
+      const list = await api.getTasks();
+      setTasks(list);
+    } catch (err) {
+      console.error('Failed to load tasks:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // ✅ Re-fetch whenever the user navigates to /tasks (e.g. after Review page saves)
+  useEffect(() => {
+    loadTasks();
+  }, [location.pathname, loadTasks]);
 
   const handleView = (task) => setSelectedTask(task);
   const handleBack = () => setSelectedTask(null);
@@ -68,7 +72,6 @@ function TasksPage() {
       });
       const freshList = await api.getTasks();
       setTasks(freshList);
-      
       const freshSelected = freshList.find(t => t.id === updated.id) || updated;
       setSelectedTask(freshSelected);
     } catch (err) {
@@ -120,6 +123,7 @@ function TasksPage() {
       />
     );
   }
+
   return (
     <TaskManagement
       tasks={tasks}
@@ -137,7 +141,10 @@ const AppLayout = ({ user, onLogout, onUpdateUser }) => {
   const { theme, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+<<<<<<< HEAD:frontend/src/App.jsx
+=======
   // Close sidebar whenever the route changes (mobile/tablet drawer)
+>>>>>>> origin/main:src/App.jsx
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
@@ -154,13 +161,13 @@ const AppLayout = ({ user, onLogout, onUpdateUser }) => {
     <div className="app-layout">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="app-main">
-        <Header 
-          title={title} 
-          user={user} 
-          theme={theme} 
-          onToggleTheme={toggleTheme} 
-          onLogout={onLogout} 
-          onToggleSidebar={() => setSidebarOpen(o => !o)} 
+        <Header
+          title={title}
+          user={user}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          onLogout={onLogout}
+          onToggleSidebar={() => setSidebarOpen(o => !o)}
         />
         <main className="app-content">
           <Routes>
@@ -220,9 +227,7 @@ function AppInner() {
     });
   };
 
-  const handleLogin = (userData) => {
-    setUser(userData);
-  };
+  const handleLogin = (userData) => setUser(userData);
 
   const handleLogout = () => {
     import('./services/api').then(({ api }) => api.clearToken());

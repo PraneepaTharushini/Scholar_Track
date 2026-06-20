@@ -13,7 +13,7 @@ DATABASE_URL = os.getenv(
     "postgresql://postgres:lXkbAOtVInUIMHWZFygvINIaKGlspqwJ@tramway.proxy.rlwy.net:33180/railway",
 )
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='/')
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -40,7 +40,20 @@ except Exception as e:
 
 @app.route('/')
 def home():
-    return "Flask is running!"
+    return app.send_static_file('index.html')
+
+# If a user refreshes the page on a React screen, this prevents a 404 error
+@app.errorhandler(404)
+def not_found(e):
+    # 🛡️ Safely check if index.html actually exists before trying to send it
+    import os
+    static_path = os.path.join(app.static_folder, 'index.html') if app.static_folder else ''
+    
+    if static_path and os.path.exists(static_path):
+        return app.send_static_file('index.html')
+        
+    # If the file is missing, stop gracefully instead of crashing the server
+    return "Frontend files are still uploading or missing. Please refresh in a moment!", 404
 
 # IMPORTANT ROUTE FOR REACT
 @app.route('/api/test')
