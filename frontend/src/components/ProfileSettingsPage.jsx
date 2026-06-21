@@ -324,7 +324,10 @@ export default function ProfileSettingsPage({ user, onUpdateUser }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Sub-nav tabs */}
-      <div className="profile-settings-nav">
+      <div style={{
+        display: 'flex', gap: 4, padding: '16px 32px 0',
+        borderBottom: '1px solid var(--border)', background: 'var(--bg-white)'
+      }}>
         {[["profile", "My Profile"], ["settings", "Settings"]].map(([id, label]) => (
           <button
             key={id}

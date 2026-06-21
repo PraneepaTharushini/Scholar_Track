@@ -229,27 +229,6 @@
 
 .empty { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px; }
 
-/* ── AI Schedule section ── */
-.schedule-card {
-  background: linear-gradient(135deg, var(--primary) 0%, #8b5cf6 100%);
-  border-radius: 12px;
-  padding: 20px;
-  color: #fff;
-  margin-top: 20px;
-}
-.schedule-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
-.schedule-card p { font-size: 12px; opacity: .85; line-height: 1.6; }
-.schedule-times { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
-.schedule-time-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(255, 255, 255, .15);
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 12px;
-}
-
 /* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 1100px) {
   .two-col { grid-template-columns: 1fr; }

@@ -3,6 +3,15 @@ import './SystemInfo.css';
 
 const API_BASE = '/api';
 
+const getHeaders = (extra = {}) => {
+  const token = localStorage.getItem('scholar_track_token');
+  const headers = { 'Content-Type': 'application/json', ...extra };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
+
 function StatusPill({ s }) {
   const cls = s === 'Active' || s === 'Optimal' ? 'green' : s === 'Inactive' ? 'red' : 'amber';
   const dot = s === 'Active' || s === 'Optimal' ? '#10b981' : s === 'Inactive' ? '#ef4444' : '#f59e0b';
@@ -35,7 +44,7 @@ export default function SystemInfo() {
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const res = await fetch(`${API_BASE}/system/metrics`);
+        const res = await fetch(`${API_BASE}/system/metrics`, { headers: getHeaders() });
         const data = await res.json();
         setMetrics(data);
       } catch (err) {
@@ -52,8 +61,8 @@ export default function SystemInfo() {
     const fetchUsers = async () => {
       try {
         const [uRes, sRes] = await Promise.all([
-          fetch(`${API_BASE}/users`),
-          fetch(`${API_BASE}/users/stats`)
+          fetch(`${API_BASE}/users`, { headers: getHeaders() }),
+          fetch(`${API_BASE}/users/stats`, { headers: getHeaders() })
         ]);
         setUsers(await uRes.json());
         setUserStats(await sRes.json());
@@ -61,19 +70,19 @@ export default function SystemInfo() {
     };
     const fetchHealth = async () => {
       try {
-        const res = await fetch(`${API_BASE}/system/health`);
+        const res = await fetch(`${API_BASE}/system/health`, { headers: getHeaders() });
         setHealth(await res.json());
       } catch(e) { console.error(e) }
     };
     const fetchOcr = async () => {
       try {
-        const res = await fetch(`${API_BASE}/system/ocr-stats`);
+        const res = await fetch(`${API_BASE}/system/ocr-stats`, { headers: getHeaders() });
         setOcrStats(await res.json());
       } catch(e) { console.error(e) }
     };
     const fetchLogs = async () => {
       try {
-        const res = await fetch(`${API_BASE}/activity-logs`);
+        const res = await fetch(`${API_BASE}/activity-logs`, { headers: getHeaders() });
         setLogs(await res.json());
       } catch(e) { console.error(e) }
     };
@@ -92,7 +101,7 @@ export default function SystemInfo() {
   const deleteUser = async (id) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
-      await fetch(`${API_BASE}/users/${id}`, { method: 'DELETE' });
+      await fetch(`${API_BASE}/users/${id}`, { method: 'DELETE', headers: getHeaders() });
       setUsers(u => u.filter(x => x.id !== id));
       setUserStats(s => ({ ...s, total_users: s.total_users - 1, active_users: s.active_users - (users.find(x => x.id === id)?.status === 'Active' ? 1 : 0) }));
     } catch (err) {
@@ -105,7 +114,7 @@ export default function SystemInfo() {
     try {
       await fetch(`${API_BASE}/users/${id}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders(),
         body: JSON.stringify({ status: newStatus })
       });
       setUsers(u => u.map(x => x.id === id ? { ...x, status: newStatus } : x));
@@ -133,7 +142,7 @@ export default function SystemInfo() {
       if (editingUser) {
         const res = await fetch(`${API_BASE}/users/${editingUser}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getHeaders(),
           body: JSON.stringify(formData)
         });
         const updated = await res.json();
@@ -142,7 +151,7 @@ export default function SystemInfo() {
       } else {
         const res = await fetch(`${API_BASE}/users`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getHeaders(),
           body: JSON.stringify(formData)
         });
         const created = await res.json();
