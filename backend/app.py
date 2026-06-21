@@ -17,6 +17,7 @@ load_env_file()
 
 from flask import Flask, jsonify
 from flask_cors import CORS
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from extensions import db
 from routes import priority_bp
@@ -53,6 +54,32 @@ except Exception as e:
     print("Database Connection Error:")
     print(e)
 
+# ---------------------------------------------------------------------------
+# Email Reminder Scheduler
+# ---------------------------------------------------------------------------
+
+def run_daily_reminders():
+    print("Running scheduled email reminders...")
+    from routes.extra_routes import sync_notifications_from_tasks
+    with app.app_context():
+        try:
+            with db.engine.connect() as conn:
+                users = conn.execute(
+                    "SELECT id FROM users WHERE status = 'active' OR is_active = true"
+                ).mappings().all()
+            for user in users:
+                sync_notifications_from_tasks(user["id"])
+            print(f"Email reminders sent to {len(users)} users.")
+        except Exception as e:
+            print(f"Scheduler error: {e}")
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(run_daily_reminders, 'interval', hours=24, id='daily_reminders')
+scheduler.start()
+print("Email reminder scheduler started!")
+
+# ---------------------------------------------------------------------------
+
 @app.route('/')
 def home():
     return app.send_static_file('index.html')
@@ -60,14 +87,12 @@ def home():
 # If a user refreshes the page on a React screen, this prevents a 404 error
 @app.errorhandler(404)
 def not_found(e):
-    # 🛡️ Safely check if index.html actually exists before trying to send it
     import os
     static_path = os.path.join(app.static_folder, 'index.html') if app.static_folder else ''
     
     if static_path and os.path.exists(static_path):
         return app.send_static_file('index.html')
         
-    # If the file is missing, stop gracefully instead of crashing the server
     return "Frontend files are still uploading or missing. Please refresh in a moment!", 404
 
 # IMPORTANT ROUTE FOR REACT
