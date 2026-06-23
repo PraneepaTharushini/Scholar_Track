@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import LoginPage from './components/LoginPage';
@@ -140,6 +140,8 @@ const AppLayout = ({ user, onLogout, onUpdateUser }) => {
   const title = PAGE_TITLES[location.pathname] || 'Scholar Track';
   const { theme, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const role = user?.role || 'student';
+  const isAdmin = role === 'admin';
 
   // Close sidebar on path changes
   useEffect(() => {
@@ -148,7 +150,7 @@ const AppLayout = ({ user, onLogout, onUpdateUser }) => {
 
   return (
     <div className="app-layout">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} role={role} />
       <div className="app-main">
         <Header 
           title={title} 
@@ -161,14 +163,15 @@ const AppLayout = ({ user, onLogout, onUpdateUser }) => {
         <main className="app-content">
           <Routes>
             <Route path="/"              element={<Dashboard />} />
-            <Route path="/upload"        element={<UploadPage />} />
-            <Route path="/review"        element={<ReviewTaskPage />} />
-            <Route path="/tasks"         element={<TasksPage />} />
-            <Route path="/calendar"      element={<AcademicCalendar />} />
+            <Route path="/upload"        element={!isAdmin ? <UploadPage /> : <Navigate to="/" replace />} />
+            <Route path="/review"        element={!isAdmin ? <ReviewTaskPage /> : <Navigate to="/" replace />} />
+            <Route path="/tasks"         element={!isAdmin ? <TasksPage /> : <Navigate to="/" replace />} />
+            <Route path="/calendar"      element={!isAdmin ? <AcademicCalendar /> : <Navigate to="/" replace />} />
             <Route path="/analytics"     element={<AnalyticsDashboard />} />
             <Route path="/notifications" element={<Notifications />} />
-            <Route path="/system"        element={<SystemInfo />} />
+            <Route path="/system"        element={isAdmin ? <SystemInfo /> : <Navigate to="/" replace />} />
             <Route path="/settings"      element={<ProfilePage user={user} onUpdateUser={onUpdateUser} />} />
+            <Route path="*"              element={<Navigate to="/" replace />} />
           </Routes>
         </main>
       </div>

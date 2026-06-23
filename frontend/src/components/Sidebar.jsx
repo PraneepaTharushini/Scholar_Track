@@ -16,7 +16,7 @@ const navItems = [
     ),
   },
   {
-    id: 'upload', label: 'Upload Documents', path: '/upload',
+    id: 'upload', label: 'Upload Documents', path: '/upload', studentOnly: true,
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <path d="M9 12V4M9 4L6 7M9 4l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -25,7 +25,7 @@ const navItems = [
     ),
   },
   {
-    id: 'review', label: 'Review Tasks', path: '/review',
+    id: 'review', label: 'Review Tasks', path: '/review', studentOnly: true,
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <path d="M3 9l4 4 8-8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
@@ -33,7 +33,7 @@ const navItems = [
     ),
   },
   {
-    id: 'tasks', label: 'Tasks', path: '/tasks',
+    id: 'tasks', label: 'Tasks', path: '/tasks', studentOnly: true,
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <path d="M3 5h12M3 9h9M3 13h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -41,7 +41,7 @@ const navItems = [
     ),
   },
   {
-    id: 'calendar', label: 'Calendar', path: '/calendar',
+    id: 'calendar', label: 'Calendar', path: '/calendar', studentOnly: true,
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <rect x="2" y="3" width="14" height="13" rx="2" stroke="currentColor" strokeWidth="1.5"/>
@@ -66,7 +66,7 @@ const navItems = [
     ),
   },
   {
-    id: 'systeminfo', label: 'System Info', path: '/system',
+    id: 'systeminfo', label: 'System Info', path: '/system', adminOnly: true,
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.5"/>
@@ -85,7 +85,14 @@ const navItems = [
   },
 ];
 
-const Sidebar = ({ isOpen, onClose }) => {
+const Sidebar = ({ isOpen, onClose, role }) => {
+  const isAdmin = role === 'admin';
+  const visibleItems = navItems.filter(item => {
+    if (item.adminOnly && !isAdmin) return false;   // hide admin-only from students
+    if (item.studentOnly && isAdmin) return false;  // hide student-only from admins
+    return true;
+  });
+
   return (
     <>
       {isOpen && <div className="sidebar-backdrop" onClick={onClose} />}
@@ -99,7 +106,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
         <nav className="sidebar__nav">
-          {navItems.map((item) => (
+          {visibleItems.map((item) => (
             <NavLink
               key={item.id}
               to={item.path}

@@ -2,7 +2,8 @@ from datetime import datetime, date, timedelta
 import hashlib
 import os
 import uuid
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
+from sqlalchemy import text
 from extensions import db
 from models.db_queries import get_pending_tasks, get_completed_tasks, save_priority_score, save_priority_scores_batch
 from services.priority_engine import rank_tasks, score_task
@@ -24,7 +25,15 @@ def get_current_user_id() -> int | None:
     if not sid:
         auth_header = request.headers.get("Authorization", "")
         if auth_header.lower().startswith("bearer "):
-            sid = auth_header.split(None, 1)[1].strip()
+            token = auth_header.split(None, 1)[1].strip()
+            # Try to verify as JWT first
+            from app.utils.security import verify_auth_token
+            uid = verify_auth_token(current_app, token)
+            if uid is not None:
+                return uid
+            # Fallback for plain digits
+            if token.isdigit():
+                return int(token)
     if sid and sid.isdigit():
         return int(sid)
     return None
@@ -37,6 +46,25 @@ def require_auth(f):
         user_id = get_current_user_id()
         if user_id is None:
             return jsonify({"error": "Unauthorized. Please log in."}), 401
+        return f(*args, user_id=user_id, **kwargs)
+    return wrapper
+
+def require_admin(f):
+    """Decorator: return 401/403 if user is not authenticated or not an admin."""
+    from functools import wraps
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        user_id = get_current_user_id()
+        if user_id is None:
+            return jsonify({"error": "Unauthorized. Please log in."}), 401
+        
+        # Check if user has admin role in DB or is in ADMIN_EMAILS
+        with db.engine.connect() as conn:
+            u = conn.execute(text("SELECT role, email FROM users WHERE id = :id"), {"id": user_id}).mappings().first()
+            
+        if not u or (not u["role"] or u["role"].lower() != "admin") and (not u["email"] or u["email"].lower() not in {e.lower() for e in current_app.config.get("ADMIN_EMAILS", set())}):
+            return jsonify({"error": "Forbidden. Admin access required."}), 403
+            
         return f(*args, user_id=user_id, **kwargs)
     return wrapper
 
@@ -893,7 +921,8 @@ def log_activity(message, color="#6366f1"):
         print(f"Error logging activity: {e}")
 
 @documents_bp.route("/users", methods=["GET"])
-def get_admin_users():
+@require_admin
+def get_admin_users(user_id: int):
     query = "SELECT id, email, name, role, status, is_active, created_at, user_code FROM users ORDER BY id DESC"
     with db.engine.connect() as conn:
         rows = conn.execute(query).mappings().all()
@@ -912,7 +941,8 @@ def get_admin_users():
     return jsonify(users_list)
 
 @documents_bp.route("/users/stats", methods=["GET"])
-def get_users_stats():
+@require_admin
+def get_users_stats(user_id: int):
     # 1. Total users
     q1 = "SELECT COUNT(*) as cnt FROM users"
     # 2. Active users
@@ -932,7 +962,8 @@ def get_users_stats():
     })
 
 @documents_bp.route("/users", methods=["POST"])
-def admin_create_user():
+@require_admin
+def admin_create_user(user_id: int):
     data = request.get_json(force=True) or {}
     name = data.get("name")
     email = data.get("email")
@@ -992,7 +1023,8 @@ def admin_create_user():
     }), 201
 
 @documents_bp.route("/users/<int:id>", methods=["PUT"])
-def admin_update_user(id):
+@require_admin
+def admin_update_user(id, user_id: int):
     data = request.get_json(force=True) or {}
     name = data.get("name")
     email = data.get("email")
@@ -1039,7 +1071,8 @@ def admin_update_user(id):
     })
 
 @documents_bp.route("/users/<int:id>/status", methods=["PATCH"])
-def admin_toggle_user_status(id):
+@require_admin
+def admin_toggle_user_status(id, user_id: int):
     data = request.get_json(force=True) or {}
     status = data.get("status", "Active")
     is_active = (status == "Active")
@@ -1069,7 +1102,8 @@ def admin_toggle_user_status(id):
     return jsonify({"success": True})
 
 @documents_bp.route("/users/<int:id>", methods=["DELETE"])
-def admin_delete_user(id):
+@require_admin
+def admin_delete_user(id, user_id: int):
     # Fetch name first for logging
     with db.engine.connect() as conn:
         user = conn.execute("SELECT name FROM users WHERE id = :id", {"id": id}).mappings().first()
@@ -1087,7 +1121,8 @@ def admin_delete_user(id):
     return jsonify({"success": True})
 
 @documents_bp.route("/system/metrics", methods=["GET"])
-def get_system_metrics():
+@require_admin
+def get_system_metrics(user_id: int):
     query = """
         SELECT cpu_pct, memory_pct, storage_pct, uptime_pct, active_sessions 
         FROM system_metrics 
@@ -1115,12 +1150,13 @@ def get_system_metrics():
     })
 
 @documents_bp.route("/system/health", methods=["GET"])
-def get_system_health():
+@require_admin
+def get_system_health(user_id: int):
     db_status = "Online"
     db_color = "#10b981"
     try:
         with db.engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
     except Exception:
         db_status = "Offline"
         db_color = "#ef4444"
@@ -1140,7 +1176,8 @@ def get_system_health():
     })
 
 @documents_bp.route("/system/ocr-stats", methods=["GET"])
-def get_system_ocr_stats():
+@require_admin
+def get_system_ocr_stats(user_id: int):
     query = "SELECT doc_type, processed, success_rate, avg_time_sec, status FROM ocr_stats ORDER BY processed DESC"
     with db.engine.connect() as conn:
         rows = conn.execute(query).mappings().all()
@@ -1165,7 +1202,8 @@ def get_system_ocr_stats():
     return jsonify(stats_list)
 
 @documents_bp.route("/activity-logs", methods=["GET"])
-def get_system_activity_logs():
+@require_admin
+def get_system_activity_logs(user_id: int):
     query = "SELECT id, message, color, created_at FROM activity_logs ORDER BY created_at DESC LIMIT 200"
     with db.engine.connect() as conn:
         rows = conn.execute(query).mappings().all()
@@ -1179,403 +1217,4 @@ def get_system_activity_logs():
             "created_at": r["created_at"].isoformat() if r["created_at"] else ""
         })
     return jsonify(logs_list)
-
-
-# ---------------------------------------------------------------------------
-# Additional System, Notification & Reminder Routes
-# ---------------------------------------------------------------------------
-
-@documents_bp.route("/system/modules", methods=["GET"])
-def get_system_modules():
-    try:
-        # Check system_modules first
-        query = "SELECT num, name, member, role FROM system_modules ORDER BY num ASC"
-        with db.engine.connect() as conn:
-            rows = conn.execute(query).mappings().all()
-            
-        if not rows:
-            # Fallback to modules table
-            query_fallback = "SELECT num, name, member, role FROM modules ORDER BY num ASC"
-            with db.engine.connect() as conn:
-                rows = conn.execute(query_fallback).mappings().all()
-    except Exception as e:
-        print(f"Error fetching system modules: {e}")
-        rows = []
-        
-    modules_list = []
-    for r in rows:
-        modules_list.append({
-            "num": r["num"],
-            "name": r["name"],
-            "member": r["member"],
-            "role": r["role"]
-        })
-    return jsonify(modules_list)
-
-
-def parse_date(d):
-    if not d:
-        return None
-    if isinstance(d, (date, datetime)):
-        return d if isinstance(d, date) else d.date()
-    if isinstance(d, str):
-        try:
-            return date.fromisoformat(d[:10])
-        except Exception:
-            return None
-    return None
-
-
-def send_email_notification(to_email, subject, body_text):
-    import smtplib
-    from email.mime.text import MIMEText
-    from email.mime.multipart import MIMEMultipart
-    
-    smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
-    smtp_port = int(os.getenv("SMTP_PORT", "465"))
-    smtp_user = os.getenv("SMTP_USER")
-    smtp_pass = os.getenv("SMTP_PASSWORD")
-    
-    if not smtp_user or not smtp_pass:
-        print("="*60)
-        print(f"[SMTP MAIL MOCK] Sending email to: {to_email}")
-        print(f"Subject: {subject}")
-        print(f"Body:\n{body_text}")
-        print("="*60)
-        try:
-            with open("mock_emails.log", "a", encoding="utf-8") as f:
-                f.write(f"--- {datetime.utcnow().isoformat()} ---\nTo: {to_email}\nSubject: {subject}\nBody:\n{body_text}\n\n")
-        except Exception:
-            pass
-        return True
-        
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = smtp_user
-        msg['To'] = to_email
-        msg['Subject'] = subject
-        
-        msg.attach(MIMEText(body_text, 'plain'))
-        
-        if smtp_port == 465:
-            server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=5)
-        else:
-            server = smtplib.SMTP(smtp_host, smtp_port, timeout=5)
-            server.starttls()
-            
-        server.login(smtp_user, smtp_pass)
-        server.sendmail(smtp_user, to_email, msg.as_string())
-        server.quit()
-        print(f"Email sent successfully to {to_email}!")
-        return True
-    except Exception as e:
-        print(f"Failed to send email to {to_email} via SMTP: {e}")
-        return False
-
-
-def sync_notifications_from_tasks(user_id):
-    today = date.today()
-    try:
-        # Open a single begin connection block to handle all queries and insertions
-        with db.engine.begin() as conn:
-            # 1. Fetch tasks for this user
-            tasks = conn.execute(
-                "SELECT id, task_title, deadline, category, status, priority_score, quadrant, subject FROM tasks WHERE user_id = :user_id",
-                {"user_id": user_id}
-            ).mappings().all()
-            
-            # 2. Fetch existing notifications
-            existing = conn.execute("SELECT title, type FROM notifications").mappings().all()
-            existing_keys = {(e["title"], e["type"]) for e in existing}
-            
-            # 3. Fetch user email & name
-            user_email = None
-            user_name = "Student"
-            user = conn.execute("SELECT email, name FROM users WHERE id = :user_id", {"user_id": user_id}).mappings().first()
-            if user:
-                user_email = user["email"]
-                user_name = user["name"] or "Student"
-                
-            # 4. Check if email preference is enabled for this user
-            email_enabled = True
-            pref = conn.execute(
-                "SELECT is_enabled FROM reminder_preferences WHERE user_id = :user_id AND pref_key = 'email'",
-                {"user_id": user_id}
-            ).mappings().first()
-            if pref:
-                email_enabled = pref["is_enabled"]
-                
-            insert_query = """
-                INSERT INTO notifications (type, icon, title, message, time_label, is_unread, tags, course, deadline, created_at)
-                VALUES (:type, :icon, :title, :message, :time_label, :is_unread, :tags, :course, :deadline, :created_at)
-            """
-            
-            now = datetime.utcnow()
-            for t in tasks:
-                title = t["task_title"]
-                category = t["category"] or "Other"
-                status = t["status"]
-                priority_score = float(t["priority_score"]) if t["priority_score"] is not None else None
-                quadrant = t["quadrant"]
-                course = t["subject"] or category
-                deadline = parse_date(t["deadline"])
-                
-                # 1. Overdue Task Alert
-                if status != "completed" and deadline and deadline < today:
-                    key = (f"{title} is OVERDUE!", "urgent")
-                    if key not in existing_keys:
-                        days_overdue = (today - deadline).days
-                        conn.execute(insert_query, {
-                            "type": "urgent",
-                            "icon": "🚨",
-                            "title": key[0],
-                            "message": f"This task was due on {deadline.strftime('%Y-%m-%d')} ({days_overdue} days ago). Please complete it immediately.",
-                            "time_label": f"{days_overdue}d ago",
-                            "is_unread": True,
-                            "tags": ["urgent", category.lower()],
-                            "course": course,
-                            "deadline": deadline.isoformat(),
-                            "created_at": now
-                        })
-                        
-                        # Send Email
-                        if email_enabled and user_email:
-                            subject = f"[Scholar Track] URGENT: Task is Overdue - {title}"
-                            body = f"Hi {user_name},\n\nThis is an urgent alert from Scholar Track.\n\nYour task \"{title}\" (Category: {category}, Subject: {course}) is OVERDUE!\nIt was due on {deadline.strftime('%Y-%m-%d')} ({days_overdue} days ago).\n\nPlease log in to Scholar Track to complete this task.\n\nBest,\nScholar Track Team"
-                            send_email_notification(user_email, subject, body)
-                        
-                # 2. Upcoming Task Reminder
-                elif status != "completed" and deadline and 0 <= (deadline - today).days <= 3:
-                    days_left = (deadline - today).days
-                    time_lbl = "Today" if days_left == 0 else ("Tomorrow" if days_left == 1 else f"In {days_left} days")
-                    key = (f"Upcoming: {title}", "reminder")
-                    if key not in existing_keys:
-                        conn.execute(insert_query, {
-                            "type": "reminder",
-                            "icon": "⏰",
-                            "title": key[0],
-                            "message": f"Due soon on {deadline.strftime('%Y-%m-%d')} ({time_lbl}).",
-                            "time_label": time_lbl,
-                            "is_unread": True,
-                            "tags": ["reminder", category.lower()],
-                            "course": course,
-                            "deadline": deadline.isoformat(),
-                            "created_at": now
-                        })
-                        
-                        # Send Email
-                        if email_enabled and user_email:
-                            subject = f"[Scholar Track] Reminder: Upcoming Deadline - {title}"
-                            body = f"Hi {user_name},\n\nThis is a reminder from Scholar Track.\n\nYour task \"{title}\" (Category: {category}, Subject: {course}) is due soon on {deadline.strftime('%Y-%m-%d')} ({time_lbl}).\n\nPlease log in to Scholar Track to review this task.\n\nBest,\nScholar Track Team"
-                            send_email_notification(user_email, subject, body)
-                        
-                # 3. AI Priority Recommendation
-                if status != "completed" and quadrant == "DO FIRST" and priority_score and priority_score >= 7.0:
-                    key = (f"AI Recommend: Focus on {title}", "ai")
-                    if key not in existing_keys:
-                        conn.execute(insert_query, {
-                            "type": "ai",
-                            "icon": "🤖",
-                            "title": key[0],
-                            "message": f"ML prioritizer flagged this as high impact. Recommended priority score: {priority_score:.1f}.",
-                            "time_label": "AI Insight",
-                            "is_unread": False,
-                            "tags": ["ai", "focus"],
-                            "course": course,
-                            "deadline": deadline.isoformat() if deadline else "",
-                            "created_at": now
-                        })
-                        
-                        # Send Email
-                        if email_enabled and user_email:
-                            subject = f"[Scholar Track] AI Priority Alert: Focus on {title}"
-                            body = f"Hi {user_name},\n\nThis is an AI recommendation from Scholar Track.\n\nOur machine learning model has flagged \"{title}\" (Category: {category}, Subject: {course}) as a high impact task (Priority Score: {priority_score:.1f}).\nWe recommend focusing on this task first.\n\nBest,\nScholar Track Team"
-                            send_email_notification(user_email, subject, body)
-    except Exception as e:
-        print(f"Error syncing notifications: {e}")
-
-
-def sync_deadlines_from_tasks(user_id):
-    try:
-        # Open a single begin connection block to handle both select and delete/insert
-        with db.engine.begin() as conn:
-            # 1. Fetch pending tasks for this user
-            tasks = conn.execute(
-                "SELECT id, task_title, deadline, category, subject FROM tasks WHERE user_id = :user_id AND status != 'completed' AND deadline IS NOT NULL ORDER BY deadline ASC LIMIT 5",
-                {"user_id": user_id}
-            ).mappings().all()
-            
-            # 2. Clear existing upcoming_deadlines table and insert fresh ones!
-            conn.execute("DELETE FROM upcoming_deadlines")
-            
-            today = date.today()
-            insert_query = """
-                INSERT INTO upcoming_deadlines (title, course, deadline_time, color, urgency_label, sort_order)
-                VALUES (:title, :course, :deadline_time, :color, :urgency_label, :sort_order)
-            """
-            
-            for idx, t in enumerate(tasks):
-                deadline = parse_date(t["deadline"])
-                days_left = (deadline - today).days if deadline else 0
-                
-                color = "#ef4444" if days_left <= 1 else ("#f59e0b" if days_left <= 3 else "#6366f1")
-                urgency_lbl = "Overdue" if days_left < 0 else ("Today" if days_left == 0 else ("1 day" if days_left == 1 else f"{days_left} days"))
-                deadline_time = "Overdue" if days_left < 0 else (f"Due {deadline.strftime('%Y-%m-%d')}")
-                
-                conn.execute(insert_query, {
-                    "title": t["task_title"],
-                    "course": t["subject"] or t["category"] or "Other",
-                    "deadline_time": deadline_time,
-                    "color": color,
-                    "urgency_label": urgency_lbl,
-                    "sort_order": idx + 1
-                })
-    except Exception as e:
-        print(f"Error syncing deadlines: {e}")
-
-
-@documents_bp.route("/notifications", methods=["GET"])
-def get_notifications():
-    user_id = get_current_user_id() or 4
-    
-    # 🧵 Trigger synchronization in the background so it doesn't block the HTTP response
-    import threading
-    threading.Thread(target=sync_notifications_from_tasks, args=(user_id,), daemon=True).start()
-    
-    query = "SELECT id, type, icon, title, message, time_label, is_unread, tags, course, deadline FROM notifications ORDER BY id DESC"
-    try:
-        with db.engine.connect() as conn:
-            rows = conn.execute(query).mappings().all()
-    except Exception as e:
-        print(f"Error fetching notifications: {e}")
-        rows = []
-        
-    res = []
-    for r in rows:
-        res.append({
-            "id": r["id"],
-            "type": r["type"],
-            "icon": r["icon"],
-            "title": r["title"],
-            "message": r["message"],
-            "time_label": r["time_label"],
-            "is_unread": r["is_unread"],
-            "tags": r["tags"] if r["tags"] is not None else [],
-            "course": r["course"] or "",
-            "deadline": r["deadline"] or ""
-        })
-    return jsonify(res)
-
-
-@documents_bp.route("/notifications/<int:id>", methods=["DELETE"])
-def delete_notification(id):
-    query = "DELETE FROM notifications WHERE id = :id"
-    try:
-        with db.engine.begin() as conn:
-            conn.execute(query, {"id": id})
-        return jsonify({"success": True})
-    except Exception as e:
-        print(f"Error deleting notification: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-@documents_bp.route("/notifications/mark-all-read", methods=["PATCH"])
-def mark_all_notifications_read():
-    query = "UPDATE notifications SET is_unread = false"
-    try:
-        with db.engine.begin() as conn:
-            conn.execute(query)
-        return jsonify({"success": True})
-    except Exception as e:
-        print(f"Error marking all notifications read: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-@documents_bp.route("/notifications/<int:id>/read", methods=["PATCH"])
-def mark_notification_read(id):
-    query = "UPDATE notifications SET is_unread = false WHERE id = :id"
-    try:
-        with db.engine.begin() as conn:
-            conn.execute(query, {"id": id})
-        return jsonify({"success": True})
-    except Exception as e:
-        print(f"Error marking notification read: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-@documents_bp.route("/reminders/preferences", methods=["GET"])
-def get_reminder_preferences():
-    user_id = get_current_user_id() or 4
-    query = "SELECT id, pref_key, label, description, is_enabled FROM reminder_preferences WHERE user_id = :user_id OR user_id IS NULL ORDER BY id ASC"
-    try:
-        with db.engine.connect() as conn:
-            rows = conn.execute(query, {"user_id": user_id}).mappings().all()
-    except Exception as e:
-        print(f"Error fetching reminder preferences: {e}")
-        rows = []
-        
-    res = []
-    for r in rows:
-        res.append({
-            "id": r["id"],
-            "pref_key": r["pref_key"],
-            "label": r["label"],
-            "description": r["description"] or "",
-            "is_enabled": r["is_enabled"]
-        })
-    return jsonify(res)
-
-
-@documents_bp.route("/reminders/preferences/<string:key>", methods=["PATCH"])
-def update_reminder_preference(key):
-    user_id = get_current_user_id() or 4
-    data = request.get_json(force=True) or {}
-    is_enabled = data.get("is_enabled", True)
-    query = "UPDATE reminder_preferences SET is_enabled = :is_enabled WHERE pref_key = :key AND (user_id = :user_id OR user_id IS NULL)"
-    try:
-        with db.engine.begin() as conn:
-            conn.execute(query, {"is_enabled": is_enabled, "key": key, "user_id": user_id})
-        return jsonify({"success": True})
-    except Exception as e:
-        print(f"Error updating reminder preference: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-@documents_bp.route("/reminders/deadlines", methods=["GET"])
-def get_reminder_deadlines():
-    user_id = get_current_user_id() or 4
-    
-    try:
-        query = """
-            SELECT id, task_title, deadline, category, subject 
-            FROM tasks 
-            WHERE user_id = :user_id AND status != 'completed' AND deadline IS NOT NULL 
-            ORDER BY deadline ASC 
-            LIMIT 5
-        """
-        with db.engine.connect() as conn:
-            tasks = conn.execute(query, {"user_id": user_id}).mappings().all()
-    except Exception as e:
-        print(f"Error fetching reminder tasks: {e}")
-        tasks = []
-        
-    res = []
-    today = date.today()
-    for idx, t in enumerate(tasks):
-        deadline = parse_date(t["deadline"])
-        days_left = (deadline - today).days if deadline else 0
-        
-        color = "#ef4444" if days_left <= 1 else ("#f59e0b" if days_left <= 3 else "#6366f1")
-        urgency_lbl = "Overdue" if days_left < 0 else ("Today" if days_left == 0 else ("1 day" if days_left == 1 else f"{days_left} days"))
-        deadline_time = "Overdue" if days_left < 0 else (f"Due {deadline.strftime('%Y-%m-%d')}")
-        
-        res.append({
-            "id": t["id"],
-            "title": t["task_title"],
-            "course": t["subject"] or t["category"] or "Other",
-            "deadline_time": deadline_time,
-            "color": color,
-            "urgency_label": urgency_lbl
-        })
-    return jsonify(res)
 
