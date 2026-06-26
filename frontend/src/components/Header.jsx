@@ -7,7 +7,10 @@ const Header = ({ title, user, theme = 'light', onToggleTheme, onLogout, onToggl
   const location = useLocation();
   const [profileOpen, setProfileOpen] = useState(false);
 
-  const name = typeof user === 'object' ? (user?.name || 'Student') : (user || 'Student');
+  const name   = typeof user === 'object' ? (user?.name  || 'Student') : (user || 'Student');
+  const role   = typeof user === 'object' ? (user?.role  || 'student') : 'student';
+  const roleLabel = role.charAt(0).toUpperCase() + role.slice(1); // e.g. "Admin", "Student"
+  const isAdmin = role === 'admin';
   const userId = typeof user === 'object' ? user?.id : null;
   const [avatarUrl, setAvatarUrl] = useState(() => userId ? localStorage.getItem('scholar_track_avatar_' + userId) : null);
 
@@ -97,7 +100,7 @@ const Header = ({ title, user, theme = 'light', onToggleTheme, onLogout, onToggl
             </div>
             <div className="header__user-info">
               <span className="header__user-name">{name}</span>
-              <span className="header__user-role">Student</span>
+              <span className="header__user-role">{roleLabel}</span>
             </div>
             <svg
               className={`header__chevron ${profileOpen ? 'open' : ''}`}
@@ -121,12 +124,14 @@ const Header = ({ title, user, theme = 'light', onToggleTheme, onLogout, onToggl
               >
                 <span>🔔</span> Notifications
               </button>
-              <button
-                className="header__drop-item"
-                onClick={() => { navigate('/system'); setProfileOpen(false); }}
-              >
-                <span>🖥️</span> System Info
-              </button>
+              {isAdmin && (
+                <button
+                  className="header__drop-item"
+                  onClick={() => { navigate('/system'); setProfileOpen(false); }}
+                >
+                  <span>🖥️</span> System Info
+                </button>
+              )}
               <div className="header__drop-divider" />
               <button
                 className="header__drop-item danger"

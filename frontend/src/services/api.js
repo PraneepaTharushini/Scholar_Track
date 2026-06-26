@@ -37,6 +37,12 @@ export const api = {
 
   getMe: () => request('GET', '/auth/me'),
 
+  forgotPassword: (email) =>
+    request('POST', '/auth/forgot-password', { email }, false),
+
+  resetPassword: (email, code, password, confirm_password) =>
+    request('POST', '/auth/reset-password', { email, code, password, confirm_password }, false),
+
   // ── Tasks ────────────────────────────────────────────────
   getTasks: () => request('GET', '/tasks'),
 
