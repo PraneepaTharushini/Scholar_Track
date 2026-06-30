@@ -2,7 +2,8 @@ from datetime import datetime, date, timedelta
 import hashlib
 import os
 import uuid
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
+from sqlalchemy import text
 from extensions import db
 from models.db_queries import get_pending_tasks, get_completed_tasks, save_priority_score, save_priority_scores_batch
 from services.priority_engine import rank_tasks, score_task
@@ -17,13 +18,22 @@ analytics_bp = Blueprint("analytics", __name__)
 
 def get_current_user_id() -> int | None:
     """Extract authenticated student_id (user_id) from the request."""
+    # Look for X-Student-ID, query param, or Bearer token
     sid = request.headers.get("X-Student-ID")
     if not sid:
         sid = request.args.get("student_id")
     if not sid:
         auth_header = request.headers.get("Authorization", "")
         if auth_header.lower().startswith("bearer "):
-            sid = auth_header[7:].strip()  # ✅ correctly strips "Bearer " prefix
+            token = auth_header.split(None, 1)[1].strip()
+            # Try to verify as JWT first
+            from app.utils.security import verify_auth_token
+            uid = verify_auth_token(current_app, token)
+            if uid is not None:
+                return uid
+            # Fallback for plain digits
+            if token.isdigit():
+                return int(token)
     if sid and sid.isdigit():
         return int(sid)
     return None
@@ -36,6 +46,25 @@ def require_auth(f):
         user_id = get_current_user_id()
         if user_id is None:
             return jsonify({"error": "Unauthorized. Please log in."}), 401
+        return f(*args, user_id=user_id, **kwargs)
+    return wrapper
+
+def require_admin(f):
+    """Decorator: return 401/403 if user is not authenticated or not an admin."""
+    from functools import wraps
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        user_id = get_current_user_id()
+        if user_id is None:
+            return jsonify({"error": "Unauthorized. Please log in."}), 401
+        
+        # Check if user has admin role in DB or is in ADMIN_EMAILS
+        with db.engine.connect() as conn:
+            u = conn.execute(text("SELECT role, email FROM users WHERE id = :id"), {"id": user_id}).mappings().first()
+            
+        if not u or (not u["role"] or u["role"].lower() != "admin") and (not u["email"] or u["email"].lower() not in {e.lower() for e in current_app.config.get("ADMIN_EMAILS", set())}):
+            return jsonify({"error": "Forbidden. Admin access required."}), 403
+            
         return f(*args, user_id=user_id, **kwargs)
     return wrapper
 
@@ -56,12 +85,14 @@ def register():
     p_hash = hashlib.sha256(password.encode()).hexdigest()
     now = datetime.utcnow()
 
+    # Check if user already exists
     check_query = "SELECT id FROM users WHERE email = :email"
     with db.engine.connect() as conn:
         existing = conn.execute(check_query, {"email": email}).mappings().first()
         if existing:
             return jsonify({"error": "User with this email already exists"}), 409
 
+    # Insert user
     insert_query = """
         INSERT INTO users (email, password_hash, name, role, status, created_at)
         VALUES (:email, :password_hash, :name, 'student', 'active', :created_at)
@@ -132,17 +163,50 @@ def get_me(user_id: int):
 # Tasks Endpoints
 # ---------------------------------------------------------------------------
 
+SUBJECT_MAP = {
+    "DBMS": "Database Management Systems",
+    "AI": "Artificial Intelligence",
+    "SE": "Software Engineering",
+    "CN": "Computer Networks",
+    "OS": "Operating Systems",
+    "MAT": "Mathematics",
+    "PHY": "Physics",
+    "DSA": "Data Structures & Algorithms"
+}
+
+def map_subject(val):
+    if not val:
+        return "", ""
+    val_strip = val.strip()
+    if "|" in val_strip:
+        parts = val_strip.split("|", 1)
+        return parts[0].strip(), parts[1].strip()
+    if val_strip in SUBJECT_MAP:
+        return val_strip, SUBJECT_MAP[val_strip]
+    for abbr, full in SUBJECT_MAP.items():
+        if val_strip.lower() == full.lower():
+            return abbr, full
+    if len(val_strip) > 10:
+        abbr = "".join([w[0] for w in val_strip.split() if w]).upper()[:4]
+        return abbr, val_strip
+    return val_strip, val_strip
+
 @tasks_bp.route("", methods=["GET"])
 @require_auth
 def get_tasks(user_id: int):
+    # Fetch and recalculate rankings to serve updated priority scores
     pending = get_pending_tasks(user_id)
     completed = get_completed_tasks(user_id)
     ranked = rank_tasks(pending, completed)
 
+    # Persist the recalculated scores/quadrants to DB in batch
     save_priority_scores_batch(ranked, pending)
 
+    # Combine ranked pending + completed for a full response
     full_list = []
+    # 1. Pending tasks sorted by rank
     for t in ranked:
+        subj_abbr, subj_full = map_subject(t.get("subject"))
         full_list.append({
             "id": t["task_id"],
             "title": t["title"],
@@ -156,13 +220,17 @@ def get_tasks(user_id: int):
             "quadrant": t["quadrant"],
             "source": "Extracted" if t.get("confidence", 100) < 100 else "Manual Entry",
             "focus_sessions": t.get("focus_sessions", 0),
+            "subject": subj_abbr,
+            "subjectFull": subj_full,
             "ai": {
                 "urgency": float(t.get("urgency", 5)),
                 "importance": float(t.get("importance", 5)),
                 "recommended": t.get("quadrant", "SCHEDULE")
             }
         })
+    # 2. Completed tasks
     for t in completed:
+        subj_abbr, subj_full = map_subject(t.get("subject"))
         full_list.append({
             "id": t["task_id"],
             "title": t["title"],
@@ -174,8 +242,10 @@ def get_tasks(user_id: int):
             "importance_override": None,
             "priority_score": None,
             "quadrant": "ELIMINATE",
-            "source": "Manual Entry",
+            "source": "Extracted" if t.get("confidence", 100) < 100 else "Manual Entry",
             "focus_sessions": t.get("focus_sessions", 0),
+            "subject": subj_abbr,
+            "subjectFull": subj_full,
             "ai": None
         })
 
@@ -190,15 +260,17 @@ def create_task(user_id: int):
     deadline = data.get("deadline")
     category = data.get("category", "Other")
     importance_override = data.get("importance_override")
+    subject = data.get("subject", "")
 
     if not title or not deadline:
         return jsonify({"error": "Missing title or deadline"}), 400
 
     now = datetime.utcnow()
 
+    # Insert task
     insert_query = """
-        INSERT INTO tasks (user_id, task_title, description, deadline, category, status, confidence, has_error, created_at, updated_at)
-        VALUES (:user_id, :task_title, :description, :deadline, :category, 'pending', 100, False, :created_at, :updated_at)
+        INSERT INTO tasks (user_id, task_title, description, deadline, category, status, confidence, has_error, created_at, updated_at, subject)
+        VALUES (:user_id, :task_title, :description, :deadline, :category, 'pending', 100, False, :created_at, :updated_at, :subject)
         RETURNING id
     """
     with db.engine.begin() as conn:
@@ -209,10 +281,12 @@ def create_task(user_id: int):
             "deadline": deadline,
             "category": category,
             "created_at": now,
-            "updated_at": now
+            "updated_at": now,
+            "subject": subject
         }).mappings().first()
         task_id = res["id"]
 
+    # Calculate initial scores
     pending = get_pending_tasks(user_id)
     completed = get_completed_tasks(user_id)
     ranked = rank_tasks(pending, completed)
@@ -230,9 +304,12 @@ def update_task(user_id: int, id: int):
     category = data.get("category")
     status = data.get("status")
     importance_override = data.get("importance_override")
+    subject = data.get("subject")
 
     now = datetime.utcnow()
+    completed_at = now if status == "completed" else None
 
+    # Update columns dynamically based on fields provided
     update_parts = []
     params = {"id": id, "user_id": user_id, "updated_at": now}
 
@@ -259,6 +336,9 @@ def update_task(user_id: int, id: int):
     if importance_override is not None:
         update_parts.append("importance_override = :importance_override")
         params["importance_override"] = importance_override
+    if subject is not None:
+        update_parts.append("subject = :subject")
+        params["subject"] = subject
 
     if not update_parts:
         return jsonify({"error": "No fields to update"}), 400
@@ -271,6 +351,7 @@ def update_task(user_id: int, id: int):
     with db.engine.begin() as conn:
         conn.execute(query, params)
 
+    # Recalculate priority scores
     pending = get_pending_tasks(user_id)
     completed = get_completed_tasks(user_id)
     ranked = rank_tasks(pending, completed)
@@ -333,6 +414,7 @@ def batch_save_tasks(user_id: int):
                 "updated_at": now
             })
 
+    # Trigger priority scoring for new tasks
     pending = get_pending_tasks(user_id)
     completed = get_completed_tasks(user_id)
     ranked = rank_tasks(pending, completed)
@@ -452,6 +534,7 @@ def get_analytics_all(user_id: int):
     pending = get_pending_tasks(user_id)
     completed = get_completed_tasks(user_id)
 
+    # 1. Summary
     total = len(pending) + len(completed)
     overdue_count = 0
     now = date.today()
@@ -472,6 +555,7 @@ def get_analytics_all(user_id: int):
         "overdue": overdue_count
     }
 
+    # 2. Status
     ranked = rank_tasks(pending, completed)
     quadrants = {"DO FIRST": 0, "SCHEDULE": 0, "DELEGATE": 0, "ELIMINATE": 0}
     for t in ranked:
@@ -487,12 +571,14 @@ def get_analytics_all(user_id: int):
         {"label": "Eliminate", "value": quadrants["ELIMINATE"], "pct": round((quadrants["ELIMINATE"] / total_ranked) * 100), "color": "#10B981"}
     ]
 
+    # 3. Categories
     cat_counts = {}
     for t in pending + completed:
         cat = t.get("category") or "Other"
         cat_counts[cat] = cat_counts.get(cat, 0) + 1
     cat_list = [{"label": k, "count": v} for k, v in cat_counts.items()]
 
+    # 4. Insights
     if not completed:
         insights = [
             "Add and complete more tasks to unlock personalized habit analysis!",
@@ -562,16 +648,19 @@ def upload_document():
     if file.filename == "":
         return jsonify({"error": "No file selected for uploading"}), 400
     
+    # Ensure upload folder exists
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)
         
     filename = file.filename
+    # Generate unique path to avoid collisions
     doc_id = str(uuid.uuid4())
     ext = os.path.splitext(filename)[1]
     saved_name = f"{doc_id}{ext}"
     filepath = os.path.join(UPLOAD_FOLDER, saved_name)
     file.save(filepath)
     
+    # Save document record in PostgreSQL database
     query = """
         INSERT INTO documents (id, filename, status, path, created_at)
         VALUES (:id, :filename, :status, :path, :created_at)
@@ -600,6 +689,7 @@ def get_task_details():
     if not filename:
         return jsonify({"error": "Missing filename"}), 400
         
+    # Query database to find the latest document record with this filename to get its path
     query = """
         SELECT path FROM documents 
         WHERE filename = :filename 
@@ -612,6 +702,7 @@ def get_task_details():
         if row:
             filepath = row["path"]
             
+    # Read text content from the file if available
     extracted_text = ""
     if filepath and os.path.exists(filepath):
         _, ext = os.path.splitext(filepath)
@@ -624,17 +715,19 @@ def get_task_details():
                 from pypdf import PdfReader
                 reader = PdfReader(filepath)
                 text_pages = []
-                for page in reader.pages[:5]:
+                for page in reader.pages[:5]:  # Process up to 5 pages
                     text_pages.append(page.extract_text() or "")
                 extracted_text = "\n".join(text_pages)
         except Exception as e:
             print(f"Error reading file content during task extraction: {e}")
             
+    # If we failed to extract text but have the file, we can fall back to filename keyword parsing
     text_to_analyze = extracted_text if extracted_text.strip() else filename
     text_lower = text_to_analyze.lower()
     
     tasks = []
     
+    # 1. Database course document detection
     if "cs3042" in text_lower or "database" in text_lower or "dbms" in text_lower:
         tasks = [
             {
@@ -643,7 +736,9 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=10)).strftime("%Y-%m-%d"),
                 "category": "Project",
                 "description": "Identify entities, attributes, primary keys, and relationships. Draw ER diagram as specified in the course outline.",
-                "ai_analysis": {"recommended_priority": "High"},
+                "ai_analysis": {
+                    "recommended_priority": "High"
+                },
                 "confidence": 94
             },
             {
@@ -652,7 +747,9 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=5)).strftime("%Y-%m-%d"),
                 "category": "Assignment",
                 "description": "Solve SQL query sheet questions using joins, subqueries, and grouping.",
-                "ai_analysis": {"recommended_priority": "Medium"},
+                "ai_analysis": {
+                    "recommended_priority": "Medium"
+                },
                 "confidence": 92
             },
             {
@@ -661,10 +758,14 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=20)).strftime("%Y-%m-%d"),
                 "category": "Exam",
                 "description": "Midterm preparation covering normalisation, indexing, ER modeling, and SQL.",
-                "ai_analysis": {"recommended_priority": "High"},
+                "ai_analysis": {
+                    "recommended_priority": "High"
+                },
                 "confidence": 95
             }
         ]
+        
+    # 2. Unix / Shell Programming course document detection
     elif "unix" in text_lower or "shell programming" in text_lower or "os_project" in text_lower:
         tasks = [
             {
@@ -673,7 +774,9 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=4)).strftime("%Y-%m-%d"),
                 "category": "Lab",
                 "description": "Create OS_Project directory structure (src, docs, backup, scripts), copy text files, and compress directory.",
-                "ai_analysis": {"recommended_priority": "Medium"},
+                "ai_analysis": {
+                    "recommended_priority": "Medium"
+                },
                 "confidence": 95
             },
             {
@@ -682,7 +785,9 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d"),
                 "category": "Lab",
                 "description": "Write shell scripts to concatenate strings, compare strings, and find the maximum among three numbers.",
-                "ai_analysis": {"recommended_priority": "Medium"},
+                "ai_analysis": {
+                    "recommended_priority": "Medium"
+                },
                 "confidence": 90
             },
             {
@@ -691,10 +796,14 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=10)).strftime("%Y-%m-%d"),
                 "category": "Lab",
                 "description": "Generate the Fibonacci series for n terms and create a menu-driven arithmetic calculator using case statements.",
-                "ai_analysis": {"recommended_priority": "High"},
+                "ai_analysis": {
+                    "recommended_priority": "High"
+                },
                 "confidence": 92
             }
         ]
+        
+    # 3. Watchdog scenario / Operating Systems assignment detection
     elif "watchdog" in text_lower or "is4103" in text_lower or "signal handling" in text_lower or "fork" in text_lower:
         tasks = [
             {
@@ -703,10 +812,14 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d"),
                 "category": "Assignment",
                 "description": "Write a C program that forks into a Parent (Watchdog) and Child (Worker) to forcefully terminate hanging workers using signals.",
-                "ai_analysis": {"recommended_priority": "High"},
+                "ai_analysis": {
+                    "recommended_priority": "High"
+                },
                 "confidence": 96
             }
         ]
+        
+    # 4. Physics / Lab document fallback
     elif "phy1012" in text_lower or "physics" in text_lower:
         tasks = [
             {
@@ -715,7 +828,9 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=4)).strftime("%Y-%m-%d"),
                 "category": "Lab",
                 "description": "Submit lab observations, graph, and error calculation for pendulum experiment.",
-                "ai_analysis": {"recommended_priority": "Medium"},
+                "ai_analysis": {
+                    "recommended_priority": "Medium"
+                },
                 "confidence": 90
             },
             {
@@ -724,10 +839,14 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d"),
                 "category": "Quiz",
                 "description": "MCQ test on mechanics and thermodynamics.",
-                "ai_analysis": {"recommended_priority": "Low"},
+                "ai_analysis": {
+                    "recommended_priority": "Low"
+                },
                 "confidence": 85
             }
         ]
+        
+    # 5. Math / Mathematics detection
     elif "mat2012" in text_lower or "math" in text_lower or "linear algebra" in text_lower:
         tasks = [
             {
@@ -736,7 +855,9 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=6)).strftime("%Y-%m-%d"),
                 "category": "Assignment",
                 "description": "Solve problems 1-15 on matrix inversion and system of linear equations.",
-                "ai_analysis": {"recommended_priority": "Medium"},
+                "ai_analysis": {
+                    "recommended_priority": "Medium"
+                },
                 "confidence": 94
             },
             {
@@ -745,10 +866,14 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=15)).strftime("%Y-%m-%d"),
                 "category": "Exam",
                 "description": "Revision exam on differentiation and integration techniques.",
-                "ai_analysis": {"recommended_priority": "High"},
+                "ai_analysis": {
+                    "recommended_priority": "High"
+                },
                 "confidence": 91
             }
         ]
+        
+    # 6. General text parsing fallback
     else:
         clean_lines = [line.strip() for line in extracted_text.splitlines() if line.strip()]
         snippet = ""
@@ -766,13 +891,14 @@ def get_task_details():
                 "deadline": (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d"),
                 "category": "Assignment",
                 "description": f"Content summary: {snippet}" if snippet else f"Extracted tasks from document: {filename}",
-                "ai_analysis": {"recommended_priority": "Low"},
+                "ai_analysis": {
+                    "recommended_priority": "Low"
+                },
                 "confidence": 85
             }
         ]
         
     return jsonify(tasks[0] if len(tasks) == 1 else tasks)
-<<<<<<< HEAD:backend/routes/extra_routes.py
 
 
 # ---------------------------------------------------------------------------
@@ -795,7 +921,8 @@ def log_activity(message, color="#6366f1"):
         print(f"Error logging activity: {e}")
 
 @documents_bp.route("/users", methods=["GET"])
-def get_admin_users():
+@require_admin
+def get_admin_users(user_id: int):
     query = "SELECT id, email, name, role, status, is_active, created_at, user_code FROM users ORDER BY id DESC"
     with db.engine.connect() as conn:
         rows = conn.execute(query).mappings().all()
@@ -814,9 +941,13 @@ def get_admin_users():
     return jsonify(users_list)
 
 @documents_bp.route("/users/stats", methods=["GET"])
-def get_users_stats():
+@require_admin
+def get_users_stats(user_id: int):
+    # 1. Total users
     q1 = "SELECT COUNT(*) as cnt FROM users"
+    # 2. Active users
     q2 = "SELECT COUNT(*) as cnt FROM users WHERE status = 'Active' OR is_active = true"
+    # 3. Tasks created
     q3 = "SELECT COUNT(*) as cnt FROM tasks"
     
     with db.engine.connect() as conn:
@@ -831,7 +962,8 @@ def get_users_stats():
     })
 
 @documents_bp.route("/users", methods=["POST"])
-def admin_create_user():
+@require_admin
+def admin_create_user(user_id: int):
     data = request.get_json(force=True) or {}
     name = data.get("name")
     email = data.get("email")
@@ -841,16 +973,19 @@ def admin_create_user():
     if not name or not email:
         return jsonify({"error": "Missing name or email"}), 400
         
+    # Check if user already exists
     check_query = "SELECT id FROM users WHERE email = :email"
     with db.engine.connect() as conn:
         existing = conn.execute(check_query, {"email": email}).mappings().first()
         if existing:
             return jsonify({"error": "User with this email already exists"}), 409
 
+    # Generate a temporary password hash
     p_hash = hashlib.sha256("password".encode()).hexdigest()
     now = datetime.utcnow()
     is_active = (status == "Active")
     
+    # We can get next ID to construct a user_code
     with db.engine.connect() as conn:
         count_res = conn.execute("SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM users").mappings().first()
         next_id = count_res["next_id"]
@@ -888,7 +1023,8 @@ def admin_create_user():
     }), 201
 
 @documents_bp.route("/users/<int:id>", methods=["PUT"])
-def admin_update_user(id):
+@require_admin
+def admin_update_user(id, user_id: int):
     data = request.get_json(force=True) or {}
     name = data.get("name")
     email = data.get("email")
@@ -917,6 +1053,7 @@ def admin_update_user(id):
         
     log_activity(f"Admin updated user: {name} details", color="#6366f1")
     
+    # Fetch updated user to return
     with db.engine.connect() as conn:
         row = conn.execute("SELECT id, email, name, role, status, is_active, created_at, user_code FROM users WHERE id = :id", {"id": id}).mappings().first()
         
@@ -934,11 +1071,13 @@ def admin_update_user(id):
     })
 
 @documents_bp.route("/users/<int:id>/status", methods=["PATCH"])
-def admin_toggle_user_status(id):
+@require_admin
+def admin_toggle_user_status(id, user_id: int):
     data = request.get_json(force=True) or {}
     status = data.get("status", "Active")
     is_active = (status == "Active")
     
+    # Fetch name first for logging
     with db.engine.connect() as conn:
         user = conn.execute("SELECT name FROM users WHERE id = :id", {"id": id}).mappings().first()
     
@@ -963,7 +1102,9 @@ def admin_toggle_user_status(id):
     return jsonify({"success": True})
 
 @documents_bp.route("/users/<int:id>", methods=["DELETE"])
-def admin_delete_user(id):
+@require_admin
+def admin_delete_user(id, user_id: int):
+    # Fetch name first for logging
     with db.engine.connect() as conn:
         user = conn.execute("SELECT name FROM users WHERE id = :id", {"id": id}).mappings().first()
     
@@ -980,7 +1121,8 @@ def admin_delete_user(id):
     return jsonify({"success": True})
 
 @documents_bp.route("/system/metrics", methods=["GET"])
-def get_system_metrics():
+@require_admin
+def get_system_metrics(user_id: int):
     query = """
         SELECT cpu_pct, memory_pct, storage_pct, uptime_pct, active_sessions 
         FROM system_metrics 
@@ -990,6 +1132,7 @@ def get_system_metrics():
         row = conn.execute(query).mappings().first()
         
     if not row:
+        # Fallback values if database table is empty
         return jsonify({
             "cpu_pct": 12.5,
             "memory_pct": 42.1,
@@ -1007,12 +1150,13 @@ def get_system_metrics():
     })
 
 @documents_bp.route("/system/health", methods=["GET"])
-def get_system_health():
+@require_admin
+def get_system_health(user_id: int):
     db_status = "Online"
     db_color = "#10b981"
     try:
         with db.engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
     except Exception:
         db_status = "Offline"
         db_color = "#ef4444"
@@ -1032,7 +1176,8 @@ def get_system_health():
     })
 
 @documents_bp.route("/system/ocr-stats", methods=["GET"])
-def get_system_ocr_stats():
+@require_admin
+def get_system_ocr_stats(user_id: int):
     query = "SELECT doc_type, processed, success_rate, avg_time_sec, status FROM ocr_stats ORDER BY processed DESC"
     with db.engine.connect() as conn:
         rows = conn.execute(query).mappings().all()
@@ -1048,6 +1193,7 @@ def get_system_ocr_stats():
         })
         
     if not stats_list:
+        # Return fallback data if table is empty
         stats_list = [
             {"doc_type": "PDF Documents", "processed": 1240, "success_rate": 98.5, "avg_time_sec": 1.2, "status": "Optimal"},
             {"doc_type": "Text Files", "processed": 845, "success_rate": 100.0, "avg_time_sec": 0.2, "status": "Optimal"},
@@ -1056,7 +1202,8 @@ def get_system_ocr_stats():
     return jsonify(stats_list)
 
 @documents_bp.route("/activity-logs", methods=["GET"])
-def get_system_activity_logs():
+@require_admin
+def get_system_activity_logs(user_id: int):
     query = "SELECT id, message, color, created_at FROM activity_logs ORDER BY created_at DESC LIMIT 200"
     with db.engine.connect() as conn:
         rows = conn.execute(query).mappings().all()
@@ -1070,5 +1217,4 @@ def get_system_activity_logs():
             "created_at": r["created_at"].isoformat() if r["created_at"] else ""
         })
     return jsonify(logs_list)
-=======
->>>>>>> origin/main:scholar_track_priority/routes/extra_routes.py
+

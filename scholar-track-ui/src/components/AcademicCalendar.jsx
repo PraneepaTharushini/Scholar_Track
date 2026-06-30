@@ -1,38 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import './AcademicCalendar.css';
 
 const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-const eventsByMonth = {
-  '2026-3': {
-    2: { text: 'SE Quiz', type: 'low' },
-    5: { text: 'DB Assignment', type: 'high' },
-    8: { text: 'AI Presentation', type: 'medium' },
-    13: { text: 'SE Assignment', type: 'high' },
-    18: { text: 'DB Quiz', type: 'medium' },
-    23: { text: 'AI Report', type: 'high' }
-  },
-  '2026-4': {
-    3: { text: 'CS3022 Review', type: 'medium' },
-    7: { text: 'Algebra Midterm', type: 'high' },
-    14: { text: 'Physics Lab', type: 'low' },
-    20: { text: 'DBMS Project Due', type: 'high' },
-    25: { text: 'Statistics Test', type: 'medium' },
-  },
-  '2026-5': {
-    2: { text: 'Research Paper', type: 'high' },
-    9: { text: 'Group Presentation', type: 'medium' },
-    15: { text: 'NLP Assignment', type: 'low' },
-    22: { text: 'Final Project', type: 'high' },
-    28: { text: 'End-of-Sem Review', type: 'medium' },
-  },
-};
 
 function getMonthLabel(date) {
   return date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
 }
 
-function buildCalendarCells(year, monthIndex) {
+function buildCalendarCells(year, monthIndex, tasks) {
   const firstDayIndex = new Date(year, monthIndex, 1).getDay();
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const today = new Date();
@@ -42,8 +17,23 @@ function buildCalendarCells(year, monthIndex) {
     empty: true
   }));
 
-  const monthKey = `${year}-${monthIndex + 1}`;
-  const monthEvents = eventsByMonth[monthKey] || {};
+  // Group tasks by day number for the current year and monthIndex
+  const eventsByDay = {};
+  tasks.forEach(task => {
+    if (!task.deadline) return;
+    const d = new Date(task.deadline);
+    if (d.getFullYear() === year && d.getMonth() === monthIndex) {
+      const day = d.getDate();
+      if (!eventsByDay[day]) {
+        eventsByDay[day] = [];
+      }
+      eventsByDay[day].push({
+        id: task.id,
+        text: task.title,
+        type: task.priority || 'low'
+      });
+    }
+  });
 
   const days = Array.from({ length: daysInMonth }, (_, i) => {
     const day = i + 1;
@@ -54,7 +44,7 @@ function buildCalendarCells(year, monthIndex) {
     return {
       key: `day-${day}`,
       day,
-      event: monthEvents[day] || null,
+      events: eventsByDay[day] || [],
       isToday,
       empty: false
     };
@@ -74,11 +64,28 @@ function buildCalendarCells(year, monthIndex) {
 export default function AcademicCalendar() {
   const now = new Date();
   const [currentDate, setCurrentDate] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const year = currentDate.getFullYear();
   const monthIndex = currentDate.getMonth();
 
-  const cells = useMemo(() => buildCalendarCells(year, monthIndex), [year, monthIndex]);
+  useEffect(() => {
+    const loadTasks = async () => {
+      try {
+        const { api } = await import('../services/api');
+        const list = await api.getTasks();
+        setTasks(list);
+      } catch (e) {
+        console.error('Failed to load tasks for calendar:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadTasks();
+  }, []);
+
+  const cells = useMemo(() => buildCalendarCells(year, monthIndex, tasks), [year, monthIndex, tasks]);
   const monthLabel = useMemo(() => getMonthLabel(currentDate), [currentDate]);
 
   const goPrevMonth = () =>
@@ -87,7 +94,13 @@ export default function AcademicCalendar() {
   const goNextMonth = () =>
     setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
 
-  const typeLabels = { high: '⚠️ High', medium: '🔶 Medium', low: '✅ Low' };
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh', color: 'var(--text-muted)' }}>
+        <div style={{ fontSize: 16 }}>Loading calendar events...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="cal-page">
@@ -127,9 +140,11 @@ export default function AcademicCalendar() {
               {!cell.empty && (
                 <>
                   <span className="cal-date">{cell.day}</span>
-                  {cell.event && (
-                    <span className={`cal-pill ${cell.event.type}`}>{cell.event.text}</span>
-                  )}
+                  {cell.events && cell.events.map(event => (
+                    <span key={event.id || event.text} className={`cal-pill ${event.type}`} title={event.text}>
+                      {event.text}
+                    </span>
+                  ))}
                 </>
               )}
             </div>
