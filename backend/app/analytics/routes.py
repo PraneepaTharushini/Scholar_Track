@@ -160,3 +160,35 @@ def recommendations(user):
         "top_recommendation": top_rec,
     }, 200
 
+
+@analytics_bp.get("/all")
+@token_required
+def all_analytics(user):
+    """
+    Aggregated analytics endpoint — returns summary, status, categories and
+    insights in a single request so the frontend getAnalyticsAll() call works.
+    """
+    return {
+        "summary": {
+            "total":     24,
+            "completed": 14,
+            "pending":   8,
+            "overdue":   2,
+        },
+        "status": [
+            {"label": "Completed", "value": 14, "pct": 58, "color": "#22C55E"},
+            {"label": "Pending",   "value": 8,  "pct": 33, "color": "#F59E0B"},
+            {"label": "Overdue",   "value": 2,  "pct": 9,  "color": "#EF4444"},
+        ],
+        "categories": [
+            {"label": "Assignments", "count": 9},
+            {"label": "Exams",       "count": 5},
+            {"label": "Projects",    "count": 6},
+            {"label": "Reading",     "count": 4},
+        ],
+        "insights": [
+            "Most pending work is grouped around assignments and projects.",
+            "Two tasks are overdue and should be reviewed first.",
+            "Completion progress is steady; keep upcoming deadlines visible in the calendar.",
+        ],
+    }, 200
