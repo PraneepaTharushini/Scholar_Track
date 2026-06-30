@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "npm run dev --prefix frontend",
-    "build": "npm run build --prefix frontend",
-    "preview": "npm run preview --prefix frontend",
-    "install:frontend": "npm install --prefix frontend",
-    "install:all": "npm install --prefix frontend"
+    "dev": "npm run dev --prefix scholar-track-ui",
+    "build": "npm run build --prefix scholar-track-ui",
+    "preview": "npm run preview --prefix scholar-track-ui",
+    "install:frontend": "npm install --prefix scholar-track-ui",
+    "install:all": "npm install --prefix scholar-track-ui"
   }
 }
