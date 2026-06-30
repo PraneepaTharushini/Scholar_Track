@@ -43,7 +43,9 @@ def get_pending_tasks(student_id: int) -> list[dict]:
             t.category               AS category,
             t.importance_override,
             t.focus_sessions,
-            t.user_id                AS student_id
+            t.user_id                AS student_id,
+            t.confidence,
+            t.subject
         FROM tasks t
         WHERE t.user_id = :student_id
           AND t.status != 'completed'
@@ -71,7 +73,9 @@ def get_completed_tasks(student_id: int) -> list[dict]:
             t.deadline          AS deadline,
             t.completed_at,
             t.category          AS category,
-            t.focus_sessions
+            t.focus_sessions,
+            t.confidence,
+            t.subject
         FROM tasks t
         WHERE t.user_id = :student_id
           AND t.status = 'completed'

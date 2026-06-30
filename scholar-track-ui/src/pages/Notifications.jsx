@@ -1,41 +1,50 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Notifications.css';
 
-const initialNotifications = [
-  { id: 1, type: 'urgent', icon: '🚨', title: 'Database Project Due Today!', msg: 'Your DBMS assignment is due at 11:59 PM. Submit now to avoid late penalty.', time: '9:30 AM', unread: true, tags: ['urgent'], course: 'DBMS', deadline: 'Today 11:59 PM' },
-  { id: 2, type: 'reminder', icon: '⏰', title: 'Algebra Exam Tomorrow', msg: 'Your Algebra midterm is scheduled for tomorrow at 2:00 PM. Review your notes tonight.', time: '8:15 AM', unread: true, tags: ['reminder'], course: 'Mathematics', deadline: 'Tomorrow 2:00 PM' },
-  { id: 3, type: 'ai', icon: '🤖', title: 'AI Alert: Delay Risk Detected', msg: 'Based on your workload, you may delay the Statistics Assignment. Suggested start: today 4 PM.', time: 'Yesterday', unread: true, tags: ['ai'], course: 'Statistics', deadline: 'In 3 days' },
-  { id: 4, type: 'info', icon: '📌', title: 'CS Group Project – 2 Days Left', msg: 'Code review and documentation are pending. Coordinate with your team today.', time: '2 days ago', unread: false, tags: ['info'], course: 'CS3022', deadline: 'In 2 days 6:00 PM' },
-  { id: 5, type: 'success', icon: '✅', title: 'Research Paper Submitted!', msg: 'Your Physics research paper was submitted successfully. View confirmation in task history.', time: 'Yesterday 3:45 PM', unread: false, tags: ['success'], course: 'Physics', deadline: 'Completed' },
-];
-
-const settingsList = [
-  { id: 'email', label: 'Email Reminders', desc: 'Get deadline alerts in your Gmail inbox', on: true },
-  { id: 'push', label: 'Browser Push Notifications', desc: 'Instant alerts for urgent tasks', on: true },
-  { id: 'h24', label: '24-Hour Advance Reminder', desc: 'Notified one day before any deadline', on: true },
-  { id: 'h1', label: '1-Hour Final Warning', desc: 'Last-minute reminder before deadline', on: true },
-  { id: 'ai', label: 'AI Delay Prediction Alerts', desc: 'Warned when ML detects delay risk', on: true },
-  { id: 'schedule', label: 'Daily Study Schedule', desc: 'Personalised study plan each morning', on: false },
-];
-
-const upcoming = [
-  { title: 'Database Project', course: 'DBMS', time: 'Today 11:59 PM', color: '#ef4444', urgency: '3 hrs' },
-  { title: 'Algebra Midterm', course: 'Mathematics', time: 'Tomorrow 2:00 PM', color: '#f59e0b', urgency: '17 hrs' },
-  { title: 'CS Group Project', course: 'CS3022', time: 'In 2 days', color: '#6366f1', urgency: '2 days' },
-];
+const API_BASE = '/api';
 
 export default function Notifications() {
+  const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
-  const [items, setItems] = useState(initialNotifications);
-  const [toggles, setToggles] = useState(() => {
-    const m = {}; settingsList.forEach(s => m[s.id] = s.on); return m;
-  });
+  const [items, setItems] = useState([]);
+  const [settingsList, setSettingsList] = useState([]);
+  const [upcoming, setUpcoming] = useState([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('scholar_track_token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const fetchNotifs = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/notifications`, { headers });
+        setItems(await res.json());
+      } catch (e) { console.error(e); }
+    };
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/reminders/preferences`, { headers });
+        setSettingsList(await res.json());
+      } catch (e) { console.error(e); }
+    };
+    const fetchDeadlines = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/reminders/deadlines`, { headers });
+        setUpcoming(await res.json());
+      } catch (e) { console.error(e); }
+    };
+
+    fetchNotifs();
+    fetchSettings();
+    fetchDeadlines();
+  }, []);
 
   const filtered = filter === 'all' ? items
-    : filter === 'unread' ? items.filter(n => n.unread)
+    : filter === 'unread' ? items.filter(n => n.is_unread)
     : items.filter(n => n.type === filter);
 
-  const unreadCount = items.filter(n => n.unread).length;
+  const unreadCount = items.filter(n => n.is_unread).length;
   const counts = {
     urgent: items.filter(n => n.type === 'urgent').length,
     reminder: items.filter(n => n.type === 'reminder').length,
@@ -43,8 +52,56 @@ export default function Notifications() {
     ai: items.filter(n => n.type === 'ai').length,
   };
 
-  const dismiss = id => setItems(prev => prev.filter(n => n.id !== id));
-  const markAll = () => setItems(prev => prev.map(n => ({ ...n, unread: false })));
+  const dismiss = async (id) => {
+    try {
+      const token = localStorage.getItem('scholar_track_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      await fetch(`${API_BASE}/notifications/${id}`, { method: 'DELETE', headers });
+      setItems(prev => prev.filter(n => n.id !== id));
+    } catch (e) { console.error(e); }
+  };
+
+  const markAsRead = async (id) => {
+    try {
+      const token = localStorage.getItem('scholar_track_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      await fetch(`${API_BASE}/notifications/${id}/read`, { method: 'PATCH', headers });
+      setItems(prev => prev.map(n => n.id === id ? { ...n, is_unread: false } : n));
+    } catch (e) { console.error(e); }
+  };
+
+  const markAll = async () => {
+    try {
+      const token = localStorage.getItem('scholar_track_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      await fetch(`${API_BASE}/notifications/mark-all-read`, { method: 'PATCH', headers });
+      setItems(prev => prev.map(n => ({ ...n, is_unread: false })));
+    } catch (e) { console.error(e); }
+  };
+
+  const toggleSetting = async (pref_key, current_status) => {
+    try {
+      const token = localStorage.getItem('scholar_track_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      await fetch(`${API_BASE}/reminders/preferences/${pref_key}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ is_enabled: !current_status })
+      });
+      setSettingsList(prev => prev.map(s => s.pref_key === pref_key ? { ...s, is_enabled: !current_status } : s));
+    } catch (e) { console.error(e); }
+  };
+
+  const viewTask = (notif) => {
+    if (notif.is_unread) {
+      markAsRead(notif.id);
+    }
+    navigate('/tasks');
+  };
 
   return (
     <div className="notif-page">
@@ -87,21 +144,21 @@ export default function Notifications() {
               {filtered.length === 0 ? (
                 <div className="empty">🎉 All caught up! No notifications here.</div>
               ) : filtered.map(n => (
-                <div key={n.id} className={`notif-item${n.unread ? ' unread' : ''}`}>
-                  {n.unread && <div className="unread-dot" />}
+                <div key={n.id} className={`notif-item${n.is_unread ? ' unread' : ''}`}>
+                  {n.is_unread && <div className="unread-dot" />}
                   <div className={`notif-ico ${n.type}`}>{n.icon}</div>
                   <div className="notif-body">
                     <div className="notif-top">
                       <div className="notif-ttl">{n.title}</div>
-                      <div className="notif-time">{n.time}</div>
+                      <div className="notif-time">{n.time_label}</div>
                     </div>
-                    <div className="notif-msg">{n.msg}</div>
+                    <div className="notif-msg">{n.message}</div>
                     <div className="notif-tags">
-                      {n.tags.map(t => <span key={t} className={`tag ${t}`}>{t.toUpperCase()}</span>)}
-                      <span className="course-tag">{n.course}</span>
+                      {(n.tags || []).map(t => <span key={t} className={`tag ${t}`}>{t.toUpperCase()}</span>)}
+                      {n.course && <span className="course-tag">{n.course}</span>}
                     </div>
                     <div className="notif-action">
-                      <button className="btn-sm primary">View Task</button>
+                      <button className="btn-sm primary" onClick={() => viewTask(n)}>View Task</button>
                       <button className="btn-sm ghost" onClick={() => dismiss(n.id)}>Dismiss</button>
                     </div>
                   </div>
@@ -115,13 +172,13 @@ export default function Notifications() {
               <div className="panel-title">📅 Upcoming Deadlines</div>
             </div>
             {upcoming.map((d, i) => (
-              <div className="deadline-item" key={i}>
+              <div className="deadline-item" key={d.id || i}>
                 <div className="deadline-bar" style={{ background: d.color }} />
                 <div className="deadline-info">
                   <div className="deadline-title">{d.title}</div>
-                  <div className="deadline-sub">{d.course} · {d.time}</div>
+                  <div className="deadline-sub">{d.course} · {d.deadline_time}</div>
                 </div>
-                <div className="deadline-time" style={{ color: d.color }}>{d.urgency}</div>
+                <div className="deadline-time" style={{ color: d.color }}>{d.urgency_label}</div>
               </div>
             ))}
           </div>
@@ -138,15 +195,46 @@ export default function Notifications() {
                 <div className="setting-row" key={s.id}>
                   <div className="setting-info">
                     <div className="setting-name">{s.label}</div>
-                    <div className="setting-desc">{s.desc}</div>
+                    <div className="setting-desc">{s.description}</div>
                   </div>
                   <button
-                    className={`toggle${toggles[s.id] ? ' on' : ''}`}
-                    onClick={() => setToggles(p => ({ ...p, [s.id]: !p[s.id] }))}
+                    className={`toggle${s.is_enabled ? ' on' : ''}`}
+                    onClick={() => toggleSetting(s.pref_key, s.is_enabled)}
                   />
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* AI Study schedule suggestion */}
+          <div className="schedule-card">
+            <h4>🤖 AI Study Schedule for Today</h4>
+            <p>Based on your deadlines and past patterns, here's your optimised study plan:</p>
+            <div className="schedule-times">
+              <div className="schedule-time-row"><span>🕓 4:00 – 6:00 PM</span><span style={{ fontWeight: 600 }}>Database Project</span></div>
+              <div className="schedule-time-row"><span>🕖 6:30 – 8:00 PM</span><span style={{ fontWeight: 600 }}>Algebra Review</span></div>
+              <div className="schedule-time-row"><span>🕗 8:30 – 9:30 PM</span><span style={{ fontWeight: 600 }}>Statistics Read</span></div>
+            </div>
+          </div>
+
+          {/* Notification channel status */}
+          <div className="panel" style={{ marginTop: 20 }}>
+            <div className="panel-header">
+              <div className="panel-title">📡 Delivery Channels</div>
+            </div>
+            {[
+              { icon: '📧', label: 'Gmail SMTP', status: 'Connected', color: '#10b981' },
+              { icon: '🌐', label: 'Browser Push', status: 'Enabled', color: '#10b981' },
+              { icon: '📱', label: 'PWA Mobile', status: 'Ready', color: '#10b981' },
+            ].map(c => (
+              <div className="setting-row" key={c.label}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 18 }}>{c.icon}</span>
+                  <div className="setting-name">{c.label}</div>
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: c.color }}>● {c.status}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
