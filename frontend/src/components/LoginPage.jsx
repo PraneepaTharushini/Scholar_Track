@@ -68,6 +68,24 @@ const IconCheck = () => (
   </svg>
 );
 
+<<<<<<< HEAD
+/* Password match/no-match inline icons */
+const IconMatchTick = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="m9 12 2 2 4-4"/>
+  </svg>
+);
+
+const IconMatchCross = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="m15 9-6 6M9 9l6 6"/>
+  </svg>
+);
+
+=======
+>>>>>>> origin/testProduce
 /* ── Forgot-password multi-step sub-component ── */
 function ForgotPasswordFlow({ onBack }) {
   // step: 'email' | 'code' | 'done'
@@ -297,6 +315,19 @@ function ForgotPasswordFlow({ onBack }) {
 
 /* ── Main Login/Register page ── */
 export default function LoginPage({ onLogin }) {
+<<<<<<< HEAD
+  const [mode, setMode]                         = useState("login");
+  const [showForgot, setShowForgot]             = useState(false);
+  const [name, setName]                         = useState("");
+  const [email, setEmail]                       = useState("");
+  const [password, setPassword]                 = useState("");
+  const [confirmPassword, setConfirmPassword]   = useState("");
+  const [showPassword, setShowPassword]         = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading]               = useState(false);
+  const [error, setError]                       = useState("");
+  const [focusedField, setFocusedField]         = useState(null);
+=======
   const [mode, setMode]                   = useState("login");
   const [showForgot, setShowForgot]       = useState(false);
   const [name, setName]                   = useState("");
@@ -306,11 +337,17 @@ export default function LoginPage({ onLogin }) {
   const [isLoading, setIsLoading]         = useState(false);
   const [error, setError]                 = useState("");
   const [focusedField, setFocusedField]   = useState(null);
+>>>>>>> origin/testProduce
 
   const handleSubmit = async () => {
     setError("");
     if (!email || !password) { setError("Please fill in all required fields."); return; }
     if (mode === "register" && !name) { setError("Please enter your full name."); return; }
+<<<<<<< HEAD
+    if (mode === "register" && !confirmPassword) { setError("Please confirm your password."); return; }
+    if (mode === "register" && password !== confirmPassword) { setError("Passwords do not match."); return; }
+=======
+>>>>>>> origin/testProduce
 
     setIsLoading(true);
     try {
@@ -318,7 +355,7 @@ export default function LoginPage({ onLogin }) {
       if (mode === "login") {
         result = await api.login(email, password);
       } else {
-        result = await api.register(name, email, password);
+        result = await api.register(name, email, password, confirmPassword);
       }
       api.setToken(result.token);
       if (onLogin) onLogin(result.user);
@@ -339,6 +376,10 @@ export default function LoginPage({ onLogin }) {
     setName("");
     setEmail("");
     setPassword("");
+<<<<<<< HEAD
+    setConfirmPassword("");
+=======
+>>>>>>> origin/testProduce
   };
 
   return (
@@ -424,6 +465,165 @@ export default function LoginPage({ onLogin }) {
               <div className="login-error" role="alert" aria-live="polite">
                 <IconAlert />
                 <span>{error}</span>
+<<<<<<< HEAD
+              </div>
+            )}
+
+            <div className="login-fields">
+              {/* Full Name — register only */}
+              {mode === "register" && (
+                <div className="lf-field">
+                  <label className="lf-label" htmlFor="reg-name">Full Name <span className="lf-required">*</span></label>
+                  <div className={`lf-input-wrap ${focusedField === "name" ? "lf-input-wrap--focused" : ""}`}>
+                    <span className="lf-icon"><IconUser /></span>
+                    <input
+                      id="reg-name"
+                      className="lf-input"
+                      type="text"
+                      placeholder="Your full name"
+                      autoComplete="name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      onFocus={() => setFocusedField("name")}
+                      onBlur={() => setFocusedField(null)}
+                      onKeyDown={handleKeyDown}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Email */}
+              <div className="lf-field">
+                <label className="lf-label" htmlFor="login-email">Email address <span className="lf-required">*</span></label>
+                <div className={`lf-input-wrap ${focusedField === "email" ? "lf-input-wrap--focused" : ""}`}>
+                  <span className="lf-icon"><IconEmail /></span>
+                  <input
+                    id="login-email"
+                    className="lf-input"
+                    type="email"
+                    placeholder="student@university.edu"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onFocus={() => setFocusedField("email")}
+                    onBlur={() => setFocusedField(null)}
+                    onKeyDown={handleKeyDown}
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className="lf-field">
+                <div className="lf-label-row">
+                  <label className="lf-label" htmlFor="login-password">Password <span className="lf-required">*</span></label>
+                  {mode === "login" && (
+                    <button
+                      type="button"
+                      className="lf-forgot"
+                      onClick={() => setShowForgot(true)}
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <div className={`lf-input-wrap ${focusedField === "password" ? "lf-input-wrap--focused" : ""}`}>
+                  <span className="lf-icon"><IconLock /></span>
+                  <input
+                    id="login-password"
+                    className="lf-input lf-input--password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder={mode === "register" ? "At least 8 characters" : "Enter your password"}
+                    autoComplete={mode === "login" ? "current-password" : "new-password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onFocus={() => setFocusedField("password")}
+                    onBlur={() => setFocusedField(null)}
+                    onKeyDown={handleKeyDown}
+                  />
+                  <button
+                    type="button"
+                    className="lf-eye-btn"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <IconEyeOff /> : <IconEye />}
+                  </button>
+                </div>
+                {mode === "register" && (
+                  <p className="lf-hint">Use 8+ characters with a mix of letters and numbers.</p>
+                )}
+              </div>
+
+              {/* Confirm Password — register only */}
+              {mode === "register" && (
+                <div className="lf-field">
+                  <label className="lf-label" htmlFor="reg-confirm-password">
+                    Confirm Password <span className="lf-required">*</span>
+                  </label>
+                  <div className={`lf-input-wrap ${
+                    focusedField === "confirmPassword" ? "lf-input-wrap--focused" : ""
+                  }${
+                    confirmPassword.length > 0
+                      ? password === confirmPassword
+                        ? " lf-input-wrap--match"
+                        : " lf-input-wrap--no-match"
+                      : ""
+                  }`}>
+                    <span className="lf-icon"><IconLock /></span>
+                    <input
+                      id="reg-confirm-password"
+                      className="lf-input lf-input--password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Repeat your password"
+                      autoComplete="new-password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onFocus={() => setFocusedField("confirmPassword")}
+                      onBlur={() => setFocusedField(null)}
+                      onKeyDown={handleKeyDown}
+                    />
+                    {/* Match / No-match indicator */}
+                    {confirmPassword.length > 0 && (
+                      <span className="lf-match-icon">
+                        {password === confirmPassword ? <IconMatchTick /> : <IconMatchCross />}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      className="lf-eye-btn"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                    >
+                      {showConfirmPassword ? <IconEyeOff /> : <IconEye />}
+                    </button>
+                  </div>
+                  {confirmPassword.length > 0 && (
+                    <p className={`lf-match-hint ${
+                      password === confirmPassword ? "lf-match-hint--ok" : "lf-match-hint--err"
+                    }`}>
+                      {password === confirmPassword ? "✓ Passwords match" : "✗ Passwords do not match"}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Submit */}
+            <button
+              className="lf-submit-btn"
+              onClick={handleSubmit}
+              disabled={isLoading}
+              type="button"
+            >
+              {isLoading ? (
+                <>
+                  <IconSpinner />
+                  <span>{mode === "login" ? "Signing in…" : "Creating account…"}</span>
+                </>
+              ) : (
+                <span>{mode === "login" ? "Sign In" : "Create Account"}</span>
+              )}
+=======
               </div>
             )}
 
@@ -528,6 +728,7 @@ export default function LoginPage({ onLogin }) {
               ) : (
                 <span>{mode === "login" ? "Sign In" : "Create Account"}</span>
               )}
+>>>>>>> origin/testProduce
             </button>
 
             {/* Switch mode */}

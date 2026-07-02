@@ -29,8 +29,8 @@ async function request(method, path, body = null, auth = true) {
 
 export const api = {
   // ── Auth ─────────────────────────────────────────────────
-  register: (name, email, password) =>
-    request('POST', '/auth/register', { name, email, password }, false),
+  register: (name, email, password, confirmPassword) =>
+    request('POST', '/auth/register', { name, email, password, confirm_password: confirmPassword }, false),
 
   login: (email, password) =>
     request('POST', '/auth/login', { email, password }, false),
