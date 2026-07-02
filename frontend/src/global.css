@@ -762,14 +762,26 @@ body {
 }
 
 .lf-input--password {
+<<<<<<< HEAD
   padding-right: 4px;
+=======
+  padding-right: 44px;
+>>>>>>> origin/testProduce
 }
 
 /* ── Eye Toggle ── */
 .lf-eye-btn {
+<<<<<<< HEAD
   flex-shrink: 0;
   width: 40px;
   height: 40px;
+=======
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 44px;
+>>>>>>> origin/testProduce
   display: flex;
   align-items: center;
   justify-content: center;
@@ -778,8 +790,12 @@ body {
   color: #9ca3af;
   cursor: pointer;
   transition: color 0.2s ease;
+<<<<<<< HEAD
   border-radius: 8px;
   margin-right: 4px;
+=======
+  border-radius: 0 11px 11px 0;
+>>>>>>> origin/testProduce
 }
 
 .lf-eye-btn:hover { color: #6366f1; }
@@ -806,6 +822,7 @@ body {
   line-height: 1.5;
 }
 
+<<<<<<< HEAD
 /* ── Confirm Password Match Indicator ── */
 .lf-input-wrap--match {
   border-color: #22c55e !important;
@@ -848,6 +865,8 @@ body {
 .lf-match-hint--ok  { color: #22c55e; }
 .lf-match-hint--err { color: #ef4444; }
 
+=======
+>>>>>>> origin/testProduce
 /* ── Submit Button ── */
 .lf-submit-btn {
   width: 100%;
