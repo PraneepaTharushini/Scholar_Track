@@ -1,0 +1,15 @@
+﻿
+FullName                                                           
+--------                                                           
+C:\Users\ASUS\Desktop\Scholar_Track\backend\__init__.py            
+C:\Users\ASUS\Desktop\Scholar_Track\backend\app\__init__.py        
+C:\Users\ASUS\Desktop\Scholar_Track\backend\models\__init__.py     
+C:\Users\ASUS\Desktop\Scholar_Track\backend\routes\__init__.py     
+C:\Users\ASUS\Desktop\Scholar_Track\backend\services\__init__.py   
+C:\Users\ASUS\Desktop\Scholar_Track\backend\tests\__init__.py      
+C:\Users\ASUS\Desktop\Scholar_Track\backend\v2\__init__.py         
+C:\Users\ASUS\Desktop\Scholar_Track\backend\v2\routes\__init__.py  
+C:\Users\ASUS\Desktop\Scholar_Track\backend\v2\services\__init__.py
+C:\Users\ASUS\Desktop\Scholar_Track\backend\v2\tests\__init__.py   
+
+
