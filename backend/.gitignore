@@ -3,3 +3,9 @@
 __pycache__/
 *.py[cod]
 instance/
+<<<<<<< HEAD
+*.pyc
+*.pyo
+.vite/
+=======
+>>>>>>> origin/testProduce
