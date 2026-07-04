@@ -10,6 +10,7 @@ from app.extensions import db
 from app.auth.routes import auth_bp
 from app.analytics.routes import analytics_bp
 from routes.extra_routes import documents_bp, tasks_bp
+# pyrefly: ignore [missing-import]
 from apscheduler.schedulers.background import BackgroundScheduler
 from services.notification_service import send_deadline_reminders
 
