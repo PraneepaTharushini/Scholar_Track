@@ -12,6 +12,7 @@ The rest of the business logic lives in priority_engine.py.
 """
 
 from datetime import datetime
+from sqlalchemy import text
 
 # Import the shared db instance from the local extensions module.
 # This keeps the routes independent from the app entrypoint.
@@ -169,3 +170,36 @@ def save_priority_scores_batch(ranked_tasks: list[dict], pending_tasks: list[dic
         for update in updates:
             conn.execute(query, update)
 
+
+def get_tasks_due_soon(hours: int = 24) -> list[dict]:
+    """
+    Fetch all pending tasks across ALL students whose deadline
+    falls within the next `hours`, and that haven't been reminded yet.
+    """
+    db = _get_db()
+    query = text("""
+        SELECT
+            t.id           AS task_id,
+            t.task_title   AS title,
+            t.deadline     AS deadline,
+            t.user_id      AS student_id,
+            u.email        AS email,
+            u.name         AS name
+        FROM tasks t
+        JOIN users u ON u.id = t.user_id
+        WHERE t.status != 'completed'
+          AND t.reminder_sent = FALSE
+          AND t.deadline BETWEEN NOW() AND NOW() + (:hours || ' hours')::interval
+        ORDER BY t.deadline ASC
+    """)
+    with db.engine.connect() as conn:
+        rows = conn.execute(query, {"hours": hours}).mappings().all()
+    return [dict(row) for row in rows]
+
+
+def mark_reminder_sent(task_id: int) -> None:
+    """Flag a task so its reminder email isn't sent again."""
+    db = _get_db()
+    query = text("UPDATE tasks SET reminder_sent = TRUE WHERE id = :task_id")
+    with db.engine.begin() as conn:
+        conn.execute(query, {"task_id": task_id})
