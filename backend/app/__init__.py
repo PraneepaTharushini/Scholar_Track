@@ -10,6 +10,7 @@ from app.extensions import db
 from app.auth.routes import auth_bp
 from app.analytics.routes import analytics_bp
 from routes.extra_routes import documents_bp, tasks_bp
+from routes import priority_bp
 # pyrefly: ignore [missing-import]
 from apscheduler.schedulers.background import BackgroundScheduler
 from services.notification_service import send_deadline_reminders
@@ -51,6 +52,7 @@ def create_app() -> Flask:
     app.register_blueprint(analytics_bp, url_prefix="/api/analytics")
     app.register_blueprint(documents_bp, url_prefix="/api")
     app.register_blueprint(tasks_bp, url_prefix="/api/tasks")
+    app.register_blueprint(priority_bp, url_prefix="/api/priority")
 
     if app.config.get("CREATE_DB_ON_START"):
         with app.app_context():

@@ -54,7 +54,7 @@ def get_pending_tasks(student_id: int) -> list[dict]:
         """
 
     with db.engine.connect() as conn:
-        rows = conn.execute(query, {"student_id": student_id}).mappings().all()
+        rows = conn.execute(text(query), {"student_id": student_id}).mappings().all()
 
     return [dict(row) for row in rows]
 
@@ -85,7 +85,7 @@ def get_completed_tasks(student_id: int) -> list[dict]:
         """
 
     with db.engine.connect() as conn:
-        rows = conn.execute(query, {"student_id": student_id}).mappings().all()
+        rows = conn.execute(text(query), {"student_id": student_id}).mappings().all()
 
     return [dict(row) for row in rows]
 
@@ -107,7 +107,7 @@ def save_priority_score(task_id: int, score: float, quadrant: str) -> None:
     """
 
     with db.engine.begin() as conn:   # begin() auto-commits
-        conn.execute(query, {
+        conn.execute(text(query), {
             "score":    score,
             "quadrant": quadrant,
             "now":      datetime.utcnow(),
@@ -168,7 +168,7 @@ def save_priority_scores_batch(ranked_tasks: list[dict], pending_tasks: list[dic
     
     with db.engine.begin() as conn:
         for update in updates:
-            conn.execute(query, update)
+            conn.execute(text(query), update)
 
 
 def get_tasks_due_soon(hours: int = 24) -> list[dict]:

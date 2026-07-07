@@ -82,6 +82,28 @@ def register():
     }, 201
 
 
+import hashlib
+
+def verify_password(stored_hash: str, password: str) -> bool:
+    if not stored_hash:
+        return False
+    # 1. Check Werkzeug format (scrypt / pbkdf2)
+    if stored_hash.startswith("scrypt:") or stored_hash.startswith("pbkdf2:"):
+        return check_password_hash(stored_hash, password)
+    # 2. Check SHA-256 hex format (64 characters)
+    if len(stored_hash) == 64:
+        return stored_hash == hashlib.sha256(password.encode()).hexdigest()
+    # 3. Check bcrypt format ($2b$ or $2a$)
+    if stored_hash.startswith("$2b$") or stored_hash.startswith("$2a$"):
+        try:
+            import bcrypt
+            return bcrypt.checkpw(password.encode(), stored_hash.encode())
+        except Exception:
+            pass
+    # 4. Fallback direct check
+    return stored_hash == password
+
+
 @auth_bp.post("/login")
 def login():
     payload = request.get_json(silent=True) or {}
@@ -92,7 +114,7 @@ def login():
         return {"error": "Email and password are required."}, 400
 
     user = User.query.filter_by(email=email).first()
-    if not user or not check_password_hash(user.password_hash, password):
+    if not user or not verify_password(user.password_hash, password):
         return {"error": "Invalid email or password."}, 401
 
     # Force 'admin' if email matches ADMIN_EMAILS. Otherwise, respect the existing database role.
