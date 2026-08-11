@@ -58,6 +58,17 @@ export default function Dashboard() {
   const [recs, setRecs] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Toast notification state
+  const [toast, setToast] = useState(null);
+
+  // Auto-clear toast after 5s
+  useEffect(() => {
+    if (toast) {
+      const t = setTimeout(() => setToast(null), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [toast]);
+
   // Stopwatch state
   const [timerActive, setTimerActive] = useState(false);
   const [timerTaskId, setTimerTaskId] = useState(null);
@@ -115,6 +126,15 @@ export default function Dashboard() {
   const stopAndSaveWork = async () => {
     setTimerRunning(false);
 
+    if (timeElapsed < 5) {
+      setToast({
+        message: '⚠️ Session too short to log! Please focus for at least 5 seconds.',
+        type: 'warning'
+      });
+      setTimerActive(false);
+      return;
+    }
+
     try {
       if ('speechSynthesis' in window) {
         const minutes = Math.floor(timeElapsed / 60);
@@ -133,7 +153,10 @@ export default function Dashboard() {
       }
     }
 
-    alert(`🎉 Focus session completed! ${Math.floor(timeElapsed / 60)}m ${timeElapsed % 60}s logged to the database.`);
+    setToast({
+      message: `🎉 Focus session completed! ${Math.floor(timeElapsed / 60)}m ${timeElapsed % 60}s logged to the database.`,
+      type: 'success'
+    });
     setTimerActive(false);
     fetchDashboardData();
   };
@@ -596,6 +619,14 @@ export default function Dashboard() {
               Got it! Keep Calibrating
             </button>
           </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className={`toast-notification toast-${toast.type}`} role="alert">
+          <span className="toast-icon">{toast.type === 'success' ? '🎉' : '⚠️'}</span>
+          <span className="toast-message">{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast(null)}>✕</button>
         </div>
       )}
 

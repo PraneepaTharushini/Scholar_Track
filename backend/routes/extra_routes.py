@@ -68,6 +68,25 @@ def require_admin(f):
         return f(*args, user_id=user_id, **kwargs)
     return wrapper
 
+def require_privileged(f):
+    """Decorator: return 401/403 if user is not authenticated or not privileged/admin."""
+    from functools import wraps
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        user_id = get_current_user_id()
+        if user_id is None:
+            return jsonify({"error": "Unauthorized. Please log in."}), 401
+        
+        # Check if user has admin/privileged role in DB or is in ADMIN_EMAILS
+        with db.engine.connect() as conn:
+            u = conn.execute(text("SELECT role, email FROM users WHERE id = :id"), {"id": user_id}).mappings().first()
+            
+        if not u or (not u["role"] or u["role"].lower() not in ("admin", "privileged")) and (not u["email"] or u["email"].lower() not in {e.lower() for e in current_app.config.get("ADMIN_EMAILS", set())}):
+            return jsonify({"error": "Forbidden. Privileged access required."}), 403
+            
+        return f(*args, user_id=user_id, **kwargs)
+    return wrapper
+
 # ---------------------------------------------------------------------------
 # Auth Endpoints
 # ---------------------------------------------------------------------------
@@ -88,7 +107,7 @@ def register():
     # Check if user already exists
     check_query = "SELECT id FROM users WHERE email = :email"
     with db.engine.connect() as conn:
-        existing = conn.execute(check_query, {"email": email}).mappings().first()
+        existing = conn.execute(text(check_query), {"email": email}).mappings().first()
         if existing:
             return jsonify({"error": "User with this email already exists"}), 409
 
@@ -99,7 +118,7 @@ def register():
         RETURNING id
     """
     with db.engine.begin() as conn:
-        res = conn.execute(insert_query, {
+        res = conn.execute(text(insert_query), {
             "email": email,
             "password_hash": p_hash,
             "name": name,
@@ -129,7 +148,7 @@ def login():
 
     query = "SELECT id, name, email, password_hash FROM users WHERE email = :email"
     with db.engine.connect() as conn:
-        user = conn.execute(query, {"email": email}).mappings().first()
+        user = conn.execute(text(query), {"email": email}).mappings().first()
         if not user or user["password_hash"] != p_hash:
             return jsonify({"error": "Invalid email or password"}), 401
 
@@ -147,7 +166,7 @@ def login():
 def get_me(user_id: int):
     query = "SELECT id, name, email FROM users WHERE id = :id"
     with db.engine.connect() as conn:
-        user = conn.execute(query, {"id": user_id}).mappings().first()
+        user = conn.execute(text(query), {"id": user_id}).mappings().first()
         if not user:
             return jsonify({"error": "User not found"}), 404
 
@@ -274,7 +293,7 @@ def create_task(user_id: int):
         RETURNING id
     """
     with db.engine.begin() as conn:
-        res = conn.execute(insert_query, {
+        res = conn.execute(text(insert_query), {
             "user_id": user_id,
             "task_title": title,
             "description": description,
@@ -349,7 +368,7 @@ def update_task(user_id: int, id: int):
         WHERE id = :id AND user_id = :user_id
     """
     with db.engine.begin() as conn:
-        conn.execute(query, params)
+        conn.execute(text(query), params)
 
     # Recalculate priority scores
     pending = get_pending_tasks(user_id)
@@ -364,7 +383,7 @@ def update_task(user_id: int, id: int):
 def delete_task(user_id: int, id: int):
     query = "DELETE FROM tasks WHERE id = :id AND user_id = :user_id"
     with db.engine.begin() as conn:
-        conn.execute(query, {"id": id, "user_id": user_id})
+        conn.execute(text(query), {"id": id, "user_id": user_id})
     return jsonify({"success": True})
 
 @tasks_bp.route("/<int:id>/focus", methods=["POST"])
@@ -378,7 +397,7 @@ def increment_focus_session(user_id: int, id: int):
     """
     now = datetime.utcnow()
     with db.engine.begin() as conn:
-        res = conn.execute(query, {"id": id, "user_id": user_id, "updated_at": now}).mappings().first()
+        res = conn.execute(text(query), {"id": id, "user_id": user_id, "updated_at": now}).mappings().first()
     if not res:
         return jsonify({"error": "Task not found"}), 404
     return jsonify({"success": True, "focus_sessions": res["focus_sessions"]})
@@ -400,7 +419,7 @@ def batch_save_tasks(user_id: int):
 
     with db.engine.begin() as conn:
         for t in tasks_list:
-            conn.execute(query, {
+            conn.execute(text(query), {
                 "user_id": user_id,
                 "task_title": t.get("task_title"),
                 "subject": t.get("subject", ""),
@@ -628,7 +647,7 @@ UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 def get_documents():
     query = "SELECT id, filename, status, created_at FROM documents ORDER BY created_at DESC"
     with db.engine.connect() as conn:
-        rows = conn.execute(query).mappings().all()
+        rows = conn.execute(text(query)).mappings().all()
     
     docs_list = []
     for r in rows:
@@ -667,7 +686,7 @@ def upload_document():
     """
     now = datetime.utcnow()
     with db.engine.begin() as conn:
-        conn.execute(query, {
+        conn.execute(text(query), {
             "id": doc_id,
             "filename": filename,
             "status": "Processed",
@@ -698,7 +717,7 @@ def get_task_details():
     """
     filepath = None
     with db.engine.connect() as conn:
-        row = conn.execute(query, {"filename": filename}).mappings().first()
+        row = conn.execute(text(query), {"filename": filename}).mappings().first()
         if row:
             filepath = row["path"]
             
@@ -912,7 +931,7 @@ def log_activity(message, color="#6366f1"):
             VALUES (:message, :color, :created_at)
         """
         with db.engine.begin() as conn:
-            conn.execute(insert_log_query, {
+            conn.execute(text(insert_log_query), {
                 "message": message,
                 "color": color,
                 "created_at": datetime.utcnow()
@@ -921,11 +940,11 @@ def log_activity(message, color="#6366f1"):
         print(f"Error logging activity: {e}")
 
 @documents_bp.route("/users", methods=["GET"])
-@require_admin
+@require_privileged
 def get_admin_users(user_id: int):
     query = "SELECT id, email, name, role, status, is_active, created_at, user_code FROM users ORDER BY id DESC"
     with db.engine.connect() as conn:
-        rows = conn.execute(query).mappings().all()
+        rows = conn.execute(text(query)).mappings().all()
     
     users_list = []
     for r in rows:
@@ -941,7 +960,7 @@ def get_admin_users(user_id: int):
     return jsonify(users_list)
 
 @documents_bp.route("/users/stats", methods=["GET"])
-@require_admin
+@require_privileged
 def get_users_stats(user_id: int):
     # 1. Total users
     q1 = "SELECT COUNT(*) as cnt FROM users"
@@ -951,9 +970,9 @@ def get_users_stats(user_id: int):
     q3 = "SELECT COUNT(*) as cnt FROM tasks"
     
     with db.engine.connect() as conn:
-        total_users = conn.execute(q1).mappings().first()["cnt"]
-        active_users = conn.execute(q2).mappings().first()["cnt"]
-        tasks_created = conn.execute(q3).mappings().first()["cnt"]
+        total_users = conn.execute(text(q1)).mappings().first()["cnt"]
+        active_users = conn.execute(text(q2)).mappings().first()["cnt"]
+        tasks_created = conn.execute(text(q3)).mappings().first()["cnt"]
         
     return jsonify({
         "total_users": total_users,
@@ -976,7 +995,7 @@ def admin_create_user(user_id: int):
     # Check if user already exists
     check_query = "SELECT id FROM users WHERE email = :email"
     with db.engine.connect() as conn:
-        existing = conn.execute(check_query, {"email": email}).mappings().first()
+        existing = conn.execute(text(check_query), {"email": email}).mappings().first()
         if existing:
             return jsonify({"error": "User with this email already exists"}), 409
 
@@ -987,7 +1006,7 @@ def admin_create_user(user_id: int):
     
     # We can get next ID to construct a user_code
     with db.engine.connect() as conn:
-        count_res = conn.execute("SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM users").mappings().first()
+        count_res = conn.execute(text("SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM users")).mappings().first()
         next_id = count_res["next_id"]
     
     user_code = f"STU{next_id:03}"
@@ -998,7 +1017,7 @@ def admin_create_user(user_id: int):
         RETURNING id
     """
     with db.engine.begin() as conn:
-        res = conn.execute(insert_query, {
+        res = conn.execute(text(insert_query), {
             "email": email,
             "password_hash": p_hash,
             "name": name,
@@ -1042,7 +1061,7 @@ def admin_update_user(id, user_id: int):
         WHERE id = :id
     """
     with db.engine.begin() as conn:
-        conn.execute(query, {
+        conn.execute(text(query), {
             "name": name,
             "email": email,
             "role": role,
@@ -1055,7 +1074,7 @@ def admin_update_user(id, user_id: int):
     
     # Fetch updated user to return
     with db.engine.connect() as conn:
-        row = conn.execute("SELECT id, email, name, role, status, is_active, created_at, user_code FROM users WHERE id = :id", {"id": id}).mappings().first()
+        row = conn.execute(text("SELECT id, email, name, role, status, is_active, created_at, user_code FROM users WHERE id = :id"), {"id": id}).mappings().first()
         
     if not row:
         return jsonify({"error": "User not found"}), 404
@@ -1079,7 +1098,7 @@ def admin_toggle_user_status(id, user_id: int):
     
     # Fetch name first for logging
     with db.engine.connect() as conn:
-        user = conn.execute("SELECT name FROM users WHERE id = :id", {"id": id}).mappings().first()
+        user = conn.execute(text("SELECT name FROM users WHERE id = :id"), {"id": id}).mappings().first()
     
     if not user:
         return jsonify({"error": "User not found"}), 404
@@ -1092,7 +1111,7 @@ def admin_toggle_user_status(id, user_id: int):
         WHERE id = :id
     """
     with db.engine.begin() as conn:
-        conn.execute(query, {
+        conn.execute(text(query), {
             "status": status,
             "is_active": is_active,
             "id": id
@@ -1106,7 +1125,7 @@ def admin_toggle_user_status(id, user_id: int):
 def admin_delete_user(id, user_id: int):
     # Fetch name first for logging
     with db.engine.connect() as conn:
-        user = conn.execute("SELECT name FROM users WHERE id = :id", {"id": id}).mappings().first()
+        user = conn.execute(text("SELECT name FROM users WHERE id = :id"), {"id": id}).mappings().first()
     
     if not user:
         return jsonify({"error": "User not found"}), 404
@@ -1115,13 +1134,13 @@ def admin_delete_user(id, user_id: int):
     
     query = "DELETE FROM users WHERE id = :id"
     with db.engine.begin() as conn:
-        conn.execute(query, {"id": id})
+        conn.execute(text(query), {"id": id})
         
     log_activity(f"Admin deleted user: {name}", color="#ef4444")
     return jsonify({"success": True})
 
 @documents_bp.route("/system/metrics", methods=["GET"])
-@require_admin
+@require_privileged
 def get_system_metrics(user_id: int):
     query = """
         SELECT cpu_pct, memory_pct, storage_pct, uptime_pct, active_sessions 
@@ -1129,7 +1148,7 @@ def get_system_metrics(user_id: int):
         ORDER BY updated_at DESC LIMIT 1
     """
     with db.engine.connect() as conn:
-        row = conn.execute(query).mappings().first()
+        row = conn.execute(text(query)).mappings().first()
         
     if not row:
         # Fallback values if database table is empty
@@ -1150,7 +1169,7 @@ def get_system_metrics(user_id: int):
     })
 
 @documents_bp.route("/system/health", methods=["GET"])
-@require_admin
+@require_privileged
 def get_system_health(user_id: int):
     db_status = "Online"
     db_color = "#10b981"
@@ -1176,11 +1195,11 @@ def get_system_health(user_id: int):
     })
 
 @documents_bp.route("/system/ocr-stats", methods=["GET"])
-@require_admin
+@require_privileged
 def get_system_ocr_stats(user_id: int):
     query = "SELECT doc_type, processed, success_rate, avg_time_sec, status FROM ocr_stats ORDER BY processed DESC"
     with db.engine.connect() as conn:
-        rows = conn.execute(query).mappings().all()
+        rows = conn.execute(text(query)).mappings().all()
         
     stats_list = []
     for r in rows:
@@ -1202,11 +1221,11 @@ def get_system_ocr_stats(user_id: int):
     return jsonify(stats_list)
 
 @documents_bp.route("/activity-logs", methods=["GET"])
-@require_admin
+@require_privileged
 def get_system_activity_logs(user_id: int):
     query = "SELECT id, message, color, created_at FROM activity_logs ORDER BY created_at DESC LIMIT 200"
     with db.engine.connect() as conn:
-        rows = conn.execute(query).mappings().all()
+        rows = conn.execute(text(query)).mappings().all()
         
     logs_list = []
     for r in rows:

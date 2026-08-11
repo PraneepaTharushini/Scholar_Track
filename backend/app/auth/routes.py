@@ -114,6 +114,7 @@ def login():
         return {"error": "Email and password are required."}, 400
 
     user = User.query.filter_by(email=email).first()
+
     if not user or not verify_password(user.password_hash, password):
         return {"error": "Invalid email or password."}, 401
 
@@ -217,3 +218,40 @@ def reset_password():
 @token_required
 def me(user):
     return {"user": user.to_public_dict()}, 200
+
+
+@auth_bp.get("/users")
+@token_required
+def get_users(user):
+    if (user.role or "").lower() not in ("admin", "privileged"):
+        return {"error": "Unauthorized access to user records."}, 403
+
+    users = User.query.all()
+    return {"users": [u.to_public_dict() for u in users]}, 200
+
+
+@auth_bp.put("/users/<int:target_user_id>/privilege")
+@token_required
+def update_user_privilege(user, target_user_id):
+    if (user.role or "").lower() not in ("admin", "privileged"):
+        return {"error": "Unauthorized access to user privileges."}, 403
+
+    if user.id == target_user_id:
+        return {"error": "You cannot modify your own privilege status."}, 400
+
+    payload = request.get_json(silent=True) or {}
+    make_privileged = payload.get("privileged")
+    if make_privileged is None:
+        return {"error": "Missing 'privileged' status in request body."}, 400
+
+    target_user = db.session.get(User, target_user_id)
+    if not target_user:
+        return {"error": "Target user not found."}, 404
+
+    if (target_user.role or "").lower() == "admin":
+        return {"error": "You cannot modify the privilege status of an admin user."}, 400
+
+    target_user.role = "privileged" if make_privileged else "student"
+    db.session.commit()
+
+    return {"message": "User privilege updated successfully.", "user": target_user.to_public_dict()}, 200

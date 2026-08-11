@@ -76,4 +76,9 @@ export const api = {
   setToken:   (token) => localStorage.setItem('scholar_track_token', token),
   clearToken: ()      => localStorage.removeItem('scholar_track_token'),
   hasToken:   ()      => !!localStorage.getItem('scholar_track_token'),
+
+  // ── User management ──────────────────────────────────────
+  getUsers: () => request('GET', '/auth/users'),
+  updateUserPrivilege: (userId, isPrivileged) =>
+    request('PUT', `/auth/users/${userId}/privilege`, { privileged: isPrivileged }),
 };

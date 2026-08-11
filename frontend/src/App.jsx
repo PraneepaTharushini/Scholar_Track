@@ -140,8 +140,9 @@ const AppLayout = ({ user, onLogout, onUpdateUser }) => {
   const title = PAGE_TITLES[location.pathname] || 'Scholar Track';
   const { theme, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const role = user?.role || 'student';
+  const role = (user?.role || 'student').toLowerCase();
   const isAdmin = role === 'admin';
+  const isPrivileged = role === 'privileged' || role === 'admin';
 
   // Close sidebar on path changes
   useEffect(() => {
@@ -163,13 +164,13 @@ const AppLayout = ({ user, onLogout, onUpdateUser }) => {
         <main className="app-content">
           <Routes>
             <Route path="/"              element={<Dashboard />} />
-            <Route path="/upload"        element={!isAdmin ? <UploadPage /> : <Navigate to="/" replace />} />
-            <Route path="/review"        element={!isAdmin ? <ReviewTaskPage /> : <Navigate to="/" replace />} />
-            <Route path="/tasks"         element={!isAdmin ? <TasksPage /> : <Navigate to="/" replace />} />
-            <Route path="/calendar"      element={!isAdmin ? <AcademicCalendar /> : <Navigate to="/" replace />} />
+            <Route path="/upload"        element={<UploadPage />} />
+            <Route path="/review"        element={<ReviewTaskPage />} />
+            <Route path="/tasks"         element={<TasksPage />} />
+            <Route path="/calendar"      element={<AcademicCalendar />} />
             <Route path="/analytics"     element={<AnalyticsDashboard />} />
             <Route path="/notifications" element={<Notifications />} />
-            <Route path="/system"        element={isAdmin ? <SystemInfo /> : <Navigate to="/" replace />} />
+            <Route path="/system"        element={isPrivileged ? <SystemInfo user={user} /> : <Navigate to="/" replace />} />
             <Route path="/settings"      element={<ProfilePage user={user} onUpdateUser={onUpdateUser} />} />
             <Route path="*"              element={<Navigate to="/" replace />} />
           </Routes>

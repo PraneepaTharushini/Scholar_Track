@@ -54,8 +54,10 @@ function MetricBar({ pct, color }) {
   );
 }
 
-export default function SystemInfo() {
+export default function SystemInfo({ user }) {
   const [tab, setTab] = useState('users');
+  const userRole = (user?.role || 'student').toLowerCase();
+  const isAdmin = userRole === 'admin';
   const [users, setUsers] = useState([]);
   const [userStats, setUserStats] = useState(MOCK_USER_STATS);
   const [ocrStats, setOcrStats] = useState([]);
@@ -66,7 +68,7 @@ export default function SystemInfo() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [formData, setFormData] = useState({ name: '', email: '', role: 'Student', status: 'Active' });
+  const [formData, setFormData] = useState({ name: '', email: '', role: 'student', status: 'Active' });
 
   // Polling for metrics — use mock if endpoint unavailable
   useEffect(() => {
@@ -116,7 +118,14 @@ export default function SystemInfo() {
   const deleteUser = async (id) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
-      await fetch(`${API_BASE}/users/${id}`, { method: 'DELETE' });
+      const token = localStorage.getItem('scholar_track_token');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      await fetch(`${API_BASE}/users/${id}`, {
+        method: 'DELETE',
+        headers
+      });
       setUsers(u => u.filter(x => x.id !== id));
       setUserStats(s => ({ ...s, total_users: s.total_users - 1, active_users: s.active_users - (users.find(x => x.id === id)?.status === 'Active' ? 1 : 0) }));
     } catch (err) {
@@ -127,9 +136,13 @@ export default function SystemInfo() {
   const toggleStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
     try {
+      const token = localStorage.getItem('scholar_track_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       await fetch(`${API_BASE}/users/${id}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ status: newStatus })
       });
       setUsers(u => u.map(x => x.id === id ? { ...x, status: newStatus } : x));
@@ -141,7 +154,7 @@ export default function SystemInfo() {
 
   const openAddModal = () => {
     setEditingUser(null);
-    setFormData({ name: '', email: '', role: 'Student', status: 'Active' });
+    setFormData({ name: '', email: '', role: 'student', status: 'Active' });
     setIsModalOpen(true);
   };
 
@@ -154,10 +167,14 @@ export default function SystemInfo() {
   const saveUser = async (e) => {
     e.preventDefault();
     try {
+      const token = localStorage.getItem('scholar_track_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       if (editingUser) {
         const res = await fetch(`${API_BASE}/users/${editingUser}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(formData)
         });
         const updated = await res.json();
@@ -166,7 +183,7 @@ export default function SystemInfo() {
       } else {
         const res = await fetch(`${API_BASE}/users`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(formData)
         });
         const created = await res.json();
@@ -214,7 +231,7 @@ export default function SystemInfo() {
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title">👥 Student Account Management</div>
-            <button className="btn-primary" onClick={openAddModal}>+ Add User</button>
+            {isAdmin && <button className="btn-primary" onClick={openAddModal}>+ Add User</button>}
           </div>
           <div className="search-bar">
             <span>🔍</span>
@@ -225,7 +242,7 @@ export default function SystemInfo() {
               <thead>
                 <tr>
                   <th>User ID</th><th>Name</th><th>Email</th><th>Joined</th>
-                  <th>Role</th><th>Status</th><th>Actions</th>
+                  <th>Role</th><th>Status</th>{isAdmin && <th>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -237,15 +254,17 @@ export default function SystemInfo() {
                     <td>{u.joined_date}</td>
                     <td><span className="pill blue">{u.role}</span></td>
                     <td><StatusPill s={u.status} /></td>
-                    <td>
-                      <button className="btn-xs edit" onClick={() => openEditModal(u)}>Edit</button>
-                      <button className="btn-xs suspend" onClick={() => toggleStatus(u.id, u.status)}>{u.status === 'Active' ? 'Suspend' : 'Restore'}</button>
-                      <button className="btn-xs del" onClick={() => deleteUser(u.id)}>Delete</button>
-                    </td>
+                    {isAdmin && (
+                      <td>
+                        <button className="btn-xs edit" onClick={() => openEditModal(u)}>Edit</button>
+                        <button className="btn-xs suspend" onClick={() => toggleStatus(u.id, u.status)}>{u.status === 'Active' ? 'Suspend' : 'Restore'}</button>
+                        <button className="btn-xs del" onClick={() => deleteUser(u.id)}>Delete</button>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>No users found</td></tr>
+                  <tr><td colSpan={isAdmin ? 7 : 6} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>No users found</td></tr>
                 )}
               </tbody>
             </table>
@@ -380,10 +399,11 @@ export default function SystemInfo() {
               </div>
               <div className="form-group">
                 <label>Role</label>
-                <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
-                  <option value="Student">Student</option>
-                  <option value="Admin">Admin</option>
-                  <option value="Instructor">Instructor</option>
+                <select value={(formData.role || '').toLowerCase()} onChange={e => setFormData({...formData, role: e.target.value})}>
+                  <option value="student">Student</option>
+                  <option value="admin">Admin</option>
+                  <option value="instructor">Instructor</option>
+                  <option value="privileged">Privileged</option>
                 </select>
               </div>
               <div className="form-group">

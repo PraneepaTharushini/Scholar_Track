@@ -66,7 +66,7 @@ const navItems = [
     ),
   },
   {
-    id: 'systeminfo', label: 'System Info', path: '/system', adminOnly: true,
+    id: 'systeminfo', label: 'System Info', path: '/system', privilegedOnly: true,
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.5"/>
@@ -86,10 +86,11 @@ const navItems = [
 ];
 
 const Sidebar = ({ isOpen, onClose, role }) => {
-  const isAdmin = role === 'admin';
+  const userRole = (role || 'student').toLowerCase();
+  const isAdmin = userRole === 'admin';
   const visibleItems = navItems.filter(item => {
     if (item.adminOnly && !isAdmin) return false;   // hide admin-only from students
-    if (item.studentOnly && isAdmin) return false;  // hide student-only from admins
+    if (item.privilegedOnly && userRole !== 'privileged' && userRole !== 'admin') return false; // hide privileged-only
     return true;
   });
 
