@@ -37,6 +37,8 @@ export const api = {
 
   getMe: () => request('GET', '/auth/me'),
 
+  updateMe: (name, email) => request('PUT', '/auth/me', { name, email }),
+
   forgotPassword: (email) =>
     request('POST', '/auth/forgot-password', { email }, false),
 

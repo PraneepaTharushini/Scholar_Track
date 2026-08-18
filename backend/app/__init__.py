@@ -43,8 +43,20 @@ def ensure_task_schema(app: Flask) -> None:
 
 
 def create_app() -> Flask:
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder='../static', static_url_path='/')
     app.config.from_object(Config())
+
+    @app.route('/')
+    def home():
+        return app.send_static_file('index.html')
+
+    @app.errorhandler(404)
+    def not_found(e):
+        import os
+        static_path = os.path.join(app.static_folder, 'index.html') if app.static_folder else ''
+        if static_path and os.path.exists(static_path):
+            return app.send_static_file('index.html')
+        return "Frontend files are still uploading or missing. Please refresh in a moment!", 404
 
     db.init_app(app)
 

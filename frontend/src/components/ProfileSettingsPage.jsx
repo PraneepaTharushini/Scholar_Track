@@ -17,9 +17,9 @@ const Field = ({ label, name, type = "text", form, setForm }) => (
 
 // ─── PROFILE PAGE ─────────────────────────────────────────────────────────────
 function ProfilePage({ user, onUpdateUser }) {
-  const nameParts = (user?.name || "").split(" ");
-  const userFirst = nameParts[0] || "Sarah";
-  const userLast = nameParts.slice(1).join(" ") || "Johnson";
+  const nameParts = (user?.name || "").trim().split(/\s+/);
+  const userFirst = nameParts[0] || (user ? "" : "Sarah");
+  const userLast = nameParts.slice(1).join(" ") || (user ? "" : "Johnson");
 
   const [form, setForm] = useState(() => {
     const savedDetails = user?.id ? localStorage.getItem(`scholar_track_profile_details_${user.id}`) : null;
@@ -28,7 +28,7 @@ function ProfilePage({ user, onUpdateUser }) {
     return {
       firstName: userFirst,
       lastName: userLast,
-      email: user?.email || "sarah.johnson@university.edu",
+      email: user?.email || (user ? "" : "sarah.johnson@university.edu"),
       studentId: user?.id ? `STU-2026-${user.id.toString().padStart(4, '0')}` : "STU-2024-8821",
       university: details.university || "State University",
       major: details.major || "Computer Science",
@@ -39,25 +39,35 @@ function ProfilePage({ user, onUpdateUser }) {
   const [saved, setSaved] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(() => user?.id ? localStorage.getItem('scholar_track_avatar_' + user.id) : null);
 
-  const handleSave = () => {
-    if (user?.id) {
-      localStorage.setItem(`scholar_track_profile_details_${user.id}`, JSON.stringify({
-        university: form.university,
-        major: form.major,
-        year: form.year,
-        bio: form.bio
-      }));
-    }
-    
-    if (onUpdateUser) {
-      onUpdateUser({
-        name: `${form.firstName} ${form.lastName}`.trim(),
-        email: form.email
-      });
-    }
+  const handleSave = async () => {
+    try {
+      const updatedName = `${form.firstName} ${form.lastName}`.trim();
+      const updatedEmail = form.email;
 
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+      // Persist the name and email changes to backend database
+      await api.updateMe(updatedName, updatedEmail);
+
+      if (user?.id) {
+        localStorage.setItem(`scholar_track_profile_details_${user.id}`, JSON.stringify({
+          university: form.university,
+          major: form.major,
+          year: form.year,
+          bio: form.bio
+        }));
+      }
+      
+      if (onUpdateUser) {
+        onUpdateUser({
+          name: updatedName,
+          email: updatedEmail
+        });
+      }
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err) {
+      alert(err.message || "Failed to update profile.");
+    }
   };
 
   const handleAvatarChange = (e) => {

@@ -220,6 +220,34 @@ def me(user):
     return {"user": user.to_public_dict()}, 200
 
 
+@auth_bp.put("/me")
+@token_required
+def update_me(user):
+    payload = request.get_json(silent=True) or {}
+    name = (payload.get("name") or "").strip()
+    email = (payload.get("email") or "").strip().lower()
+
+    if not name or not email:
+        return {"error": "Name and email are required."}, 400
+
+    if email != user.email:
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            return {"error": "Email is already registered by another user."}, 409
+        user.email = email
+
+    user.name = name
+    db.session.commit()
+
+    return {
+        "message": "Profile updated successfully.",
+        "user": user.to_public_dict(),
+    }, 200
+
+
+
+
+
 @auth_bp.get("/users")
 @token_required
 def get_users(user):

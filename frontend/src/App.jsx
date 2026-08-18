@@ -164,10 +164,10 @@ const AppLayout = ({ user, onLogout, onUpdateUser }) => {
         <main className="app-content">
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/upload" element={!isAdmin ? <UploadPage /> : <Navigate to="/" replace />} />
-            <Route path="/review" element={!isAdmin ? <ReviewTaskPage /> : <Navigate to="/" replace />} />
-            <Route path="/tasks" element={!isAdmin ? <TasksPage /> : <Navigate to="/" replace />} />
-            <Route path="/calendar" element={!isAdmin ? <AcademicCalendar /> : <Navigate to="/" replace />} />
+            <Route path="/upload" element={<UploadPage />} />
+            <Route path="/review" element={<ReviewTaskPage />} />
+            <Route path="/tasks" element={<TasksPage />} />
+            <Route path="/calendar" element={<AcademicCalendar />} />
             <Route path="/analytics" element={<AnalyticsDashboard />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/system" element={isAdmin ? <SystemInfo user={user} /> : <Navigate to="/" replace />} />

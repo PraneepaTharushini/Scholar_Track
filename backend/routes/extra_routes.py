@@ -178,6 +178,45 @@ def get_me(user_id: int):
         }
     })
 
+
+@auth_bp.route("/me", methods=["PUT"])
+@require_auth
+def update_me_legacy(user_id: int):
+    data = request.get_json(force=True) or {}
+    name = (data.get("name") or "").strip()
+    email = (data.get("email") or "").strip().lower()
+
+    if not name or not email:
+        return jsonify({"error": "Name and email are required."}), 400
+
+    # Check if the email is already taken by another user
+    check_query = "SELECT id FROM users WHERE email = :email AND id != :id"
+    with db.engine.connect() as conn:
+        existing = conn.execute(text(check_query), {"email": email, "id": user_id}).mappings().first()
+        if existing:
+            return jsonify({"error": "Email is already registered by another user."}), 409
+
+    # Update name and email
+    update_query = """
+        UPDATE users
+        SET name = :name, email = :email
+        WHERE id = :id
+    """
+    with db.engine.begin() as conn:
+        conn.execute(text(update_query), {"name": name, "email": email, "id": user_id})
+
+    return jsonify({
+        "message": "Profile updated successfully.",
+        "user": {
+            "id": user_id,
+            "name": name,
+            "email": email
+        }
+    })
+
+
+
+
 # ---------------------------------------------------------------------------
 # Tasks Endpoints
 # ---------------------------------------------------------------------------
@@ -700,6 +739,74 @@ def upload_document():
         "filename": filename
     }), 201
 
+def find_dates_in_text(text: str):
+    import re
+    from datetime import date
+    
+    # 1. YYYY-MM-DD
+    m = re.search(r'\b(20\d{2})[-/.](0?[1-9]|1[0-2])[-/.](0?[1-9]|[12]\d|3[01])\b', text)
+    if m:
+        try:
+            return date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        except ValueError:
+            pass
+
+    # 2. DD/MM/YYYY or DD-MM-YYYY
+    m = re.search(r'\b(0?[1-9]|[12]\d|3[01])[-/.](0?[1-9]|1[0-2])[-/.](20\d{2})\b', text)
+    if m:
+        try:
+            return date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+        except ValueError:
+            pass
+
+    # 3. MM/DD/YYYY
+    m = re.search(r'\b(0?[1-9]|1[0-2])[-/.](0?[1-9]|[12]\d|3[01])[-/.](20\d{2})\b', text)
+    if m:
+        try:
+            return date(int(m.group(3)), int(m.group(1)), int(m.group(2)))
+        except ValueError:
+            pass
+
+    # 4. Month Day, Year or Day Month Year
+    month_names = r'(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)'
+    months = {
+        "january": 1, "jan": 1, "february": 2, "feb": 2, "march": 3, "mar": 3,
+        "april": 4, "apr": 4, "may": 5, "june": 6, "jun": 6, "july": 7, "jul": 7,
+        "august": 8, "aug": 8, "september": 9, "sep": 9, "october": 10, "oct": 10,
+        "november": 11, "nov": 11, "december": 12, "dec": 12
+    }
+    
+    # Month Day, Year
+    m = re.search(rf'\b{month_names}\s+(\d{{1,2}})[,\s]\s*(20\d{{2}})\b', text, re.IGNORECASE)
+    if m:
+        month_str = m.group(1).lower()
+        day = int(m.group(2))
+        year = int(m.group(3))
+        month = months.get(month_str)
+        if month:
+            try:
+                return date(year, month, day)
+            except ValueError:
+                pass
+
+    # Day Month Year
+    m = re.search(rf'\b(\d{{1,2}})\s+{month_names}[,\s]\s*(20\d{{2}})\b', text, re.IGNORECASE)
+    if not m:
+        m = re.search(rf'\b(\d{{1,2}})\s+{month_names}\s+(20\d{{2}})\b', text, re.IGNORECASE)
+    if m:
+        day = int(m.group(1))
+        month_str = m.group(2).lower()
+        year = int(m.group(3))
+        month = months.get(month_str)
+        if month:
+            try:
+                return date(year, month, day)
+            except ValueError:
+                pass
+
+    return None
+
+
 @documents_bp.route("/task-details", methods=["POST"])
 def get_task_details():
     data = request.get_json(force=True) or {}
@@ -748,11 +855,15 @@ def get_task_details():
     
     # 1. Database course document detection
     if "cs3042" in text_lower or "database" in text_lower or "dbms" in text_lower:
+        base_date = find_dates_in_text(text_to_analyze)
+        if not base_date:
+            base_date = datetime.now().date()
+            
         tasks = [
             {
                 "task_title": "Database Design Phase 1: E-R Diagram",
                 "subject": "DBMS",
-                "deadline": (datetime.now() + timedelta(days=10)).strftime("%Y-%m-%d"),
+                "deadline": (base_date + timedelta(days=10)).strftime("%Y-%m-%d") if isinstance(base_date, date) else (datetime.now() + timedelta(days=10)).strftime("%Y-%m-%d"),
                 "category": "Project",
                 "description": "Identify entities, attributes, primary keys, and relationships. Draw ER diagram as specified in the course outline.",
                 "ai_analysis": {
@@ -763,7 +874,7 @@ def get_task_details():
             {
                 "task_title": "SQL Assignment 1: Complex Queries",
                 "subject": "DBMS",
-                "deadline": (datetime.now() + timedelta(days=5)).strftime("%Y-%m-%d"),
+                "deadline": (base_date + timedelta(days=5)).strftime("%Y-%m-%d") if isinstance(base_date, date) else (datetime.now() + timedelta(days=5)).strftime("%Y-%m-%d"),
                 "category": "Assignment",
                 "description": "Solve SQL query sheet questions using joins, subqueries, and grouping.",
                 "ai_analysis": {
@@ -774,7 +885,7 @@ def get_task_details():
             {
                 "task_title": "Database Systems Midterm Exam",
                 "subject": "DBMS",
-                "deadline": (datetime.now() + timedelta(days=20)).strftime("%Y-%m-%d"),
+                "deadline": (base_date + timedelta(days=20)).strftime("%Y-%m-%d") if isinstance(base_date, date) else (datetime.now() + timedelta(days=20)).strftime("%Y-%m-%d"),
                 "category": "Exam",
                 "description": "Midterm preparation covering normalisation, indexing, ER modeling, and SQL.",
                 "ai_analysis": {
@@ -786,11 +897,15 @@ def get_task_details():
         
     # 2. Unix / Shell Programming course document detection
     elif "unix" in text_lower or "shell programming" in text_lower or "os_project" in text_lower:
+        base_date = find_dates_in_text(text_to_analyze)
+        if not base_date:
+            base_date = datetime.now().date()
+            
         tasks = [
             {
                 "task_title": "Unix Directory Structure & File Copying",
                 "subject": "OS",
-                "deadline": (datetime.now() + timedelta(days=4)).strftime("%Y-%m-%d"),
+                "deadline": (base_date + timedelta(days=4)).strftime("%Y-%m-%d") if isinstance(base_date, date) else (datetime.now() + timedelta(days=4)).strftime("%Y-%m-%d"),
                 "category": "Lab",
                 "description": "Create OS_Project directory structure (src, docs, backup, scripts), copy text files, and compress directory.",
                 "ai_analysis": {
@@ -801,7 +916,7 @@ def get_task_details():
             {
                 "task_title": "Shell Scripting: String & Compare Operations",
                 "subject": "OS",
-                "deadline": (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d"),
+                "deadline": (base_date + timedelta(days=7)).strftime("%Y-%m-%d") if isinstance(base_date, date) else (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d"),
                 "category": "Lab",
                 "description": "Write shell scripts to concatenate strings, compare strings, and find the maximum among three numbers.",
                 "ai_analysis": {
@@ -812,7 +927,7 @@ def get_task_details():
             {
                 "task_title": "Shell Scripting: Calculator & Fibonacci",
                 "subject": "OS",
-                "deadline": (datetime.now() + timedelta(days=10)).strftime("%Y-%m-%d"),
+                "deadline": (base_date + timedelta(days=10)).strftime("%Y-%m-%d") if isinstance(base_date, date) else (datetime.now() + timedelta(days=10)).strftime("%Y-%m-%d"),
                 "category": "Lab",
                 "description": "Generate the Fibonacci series for n terms and create a menu-driven arithmetic calculator using case statements.",
                 "ai_analysis": {
@@ -824,11 +939,14 @@ def get_task_details():
         
     # 3. Watchdog scenario / Operating Systems assignment detection
     elif "watchdog" in text_lower or "is4103" in text_lower or "signal handling" in text_lower or "fork" in text_lower:
+        base_date = find_dates_in_text(text_to_analyze)
+        deadline_val = base_date.strftime("%Y-%m-%d") if base_date else (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
+        
         tasks = [
             {
                 "task_title": "OS Assignment 02: Watchdog Signal Handling C Program",
                 "subject": "OS",
-                "deadline": (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d"),
+                "deadline": deadline_val,
                 "category": "Assignment",
                 "description": "Write a C program that forks into a Parent (Watchdog) and Child (Worker) to forcefully terminate hanging workers using signals.",
                 "ai_analysis": {
@@ -840,11 +958,15 @@ def get_task_details():
         
     # 4. Physics / Lab document fallback
     elif "phy1012" in text_lower or "physics" in text_lower:
+        base_date = find_dates_in_text(text_to_analyze)
+        if not base_date:
+            base_date = datetime.now().date()
+            
         tasks = [
             {
                 "task_title": "Lab Report 1: Simple Pendulum",
                 "subject": "Physics",
-                "deadline": (datetime.now() + timedelta(days=4)).strftime("%Y-%m-%d"),
+                "deadline": (base_date + timedelta(days=4)).strftime("%Y-%m-%d") if isinstance(base_date, date) else (datetime.now() + timedelta(days=4)).strftime("%Y-%m-%d"),
                 "category": "Lab",
                 "description": "Submit lab observations, graph, and error calculation for pendulum experiment.",
                 "ai_analysis": {
@@ -855,7 +977,7 @@ def get_task_details():
             {
                 "task_title": "Physics Quiz 1",
                 "subject": "Physics",
-                "deadline": (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d"),
+                "deadline": (base_date + timedelta(days=7)).strftime("%Y-%m-%d") if isinstance(base_date, date) else (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d"),
                 "category": "Quiz",
                 "description": "MCQ test on mechanics and thermodynamics.",
                 "ai_analysis": {
@@ -867,11 +989,15 @@ def get_task_details():
         
     # 5. Math / Mathematics detection
     elif "mat2012" in text_lower or "math" in text_lower or "linear algebra" in text_lower:
+        base_date = find_dates_in_text(text_to_analyze)
+        if not base_date:
+            base_date = datetime.now().date()
+            
         tasks = [
             {
                 "task_title": "Linear Algebra Problem Set 1",
                 "subject": "Mathematics",
-                "deadline": (datetime.now() + timedelta(days=6)).strftime("%Y-%m-%d"),
+                "deadline": (base_date + timedelta(days=6)).strftime("%Y-%m-%d") if isinstance(base_date, date) else (datetime.now() + timedelta(days=6)).strftime("%Y-%m-%d"),
                 "category": "Assignment",
                 "description": "Solve problems 1-15 on matrix inversion and system of linear equations.",
                 "ai_analysis": {
@@ -882,7 +1008,7 @@ def get_task_details():
             {
                 "task_title": "Calculus Revision Exam",
                 "subject": "Mathematics",
-                "deadline": (datetime.now() + timedelta(days=15)).strftime("%Y-%m-%d"),
+                "deadline": (base_date + timedelta(days=15)).strftime("%Y-%m-%d") if isinstance(base_date, date) else (datetime.now() + timedelta(days=15)).strftime("%Y-%m-%d"),
                 "category": "Exam",
                 "description": "Revision exam on differentiation and integration techniques.",
                 "ai_analysis": {
@@ -902,12 +1028,14 @@ def get_task_details():
                 snippet = snippet[:197] + "..."
                 
         base_name = os.path.splitext(filename)[0].replace("_", " ").replace("-", " ")
+        extracted_date = find_dates_in_text(text_to_analyze)
+        deadline_val = extracted_date.strftime("%Y-%m-%d") if extracted_date else (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
         
         tasks = [
             {
                 "task_title": f"Review {base_name}",
                 "subject": "Other",
-                "deadline": (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d"),
+                "deadline": deadline_val,
                 "category": "Assignment",
                 "description": f"Content summary: {snippet}" if snippet else f"Extracted tasks from document: {filename}",
                 "ai_analysis": {
