@@ -256,13 +256,40 @@
   .summary-bar { grid-template-columns: repeat(2, 1fr); }
 }
 
+@media (max-width: 768px) {
+  /* Let notification list scroll naturally on mobile (no fixed height cap) */
+  .notif-list {
+    max-height: none;
+  }
+
+  /* Larger touch targets for action buttons */
+  .btn-sm {
+    padding: 7px 14px;
+    font-size: 13px;
+    min-height: 36px;
+  }
+
+  /* Filter group — wrap pills */
+  .filter-group {
+    gap: 8px;
+  }
+}
+
 @media (max-width: 600px) {
   .summary-bar { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .notif-item  { padding: 12px 16px; gap: 10px; }
   .filter-group { padding: 10px 14px; }
+
+  /* Notification action buttons stack on very small screens */
+  .notif-action {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
 }
 
 @media (max-width: 420px) {
   .summary-bar { grid-template-columns: 1fr 1fr; }
   .sum-card    { padding: 14px; }
+  .sum-num     { font-size: 20px; }
+  .sum-icon    { width: 38px; height: 38px; font-size: 17px; }
 }

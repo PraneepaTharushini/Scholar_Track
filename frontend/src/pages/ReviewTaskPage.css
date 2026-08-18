@@ -554,3 +554,44 @@
     justify-content: flex-end;
   }
 }
+
+@media (max-width: 480px) {
+  .review-page {
+    padding: 12px;
+  }
+
+  /* Banner — hide count badge, integrate into text on tiny screens */
+  .review-banner {
+    padding: 12px 14px 12px 18px;
+    gap: 10px;
+  }
+
+  .review-banner__count {
+    display: none;
+  }
+
+  /* Task card body — tighter padding */
+  .task-card__body {
+    padding: 14px;
+  }
+
+  .task-card__header {
+    padding: 12px 14px 10px;
+  }
+
+  /* Footer buttons — full width */
+  .review-footer__actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .review-footer__actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .review-footer {
+    bottom: 12px;
+    padding: 14px 16px;
+  }
+}

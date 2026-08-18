@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import MobileBottomNav from './components/MobileBottomNav';
 import LoginPage from './components/LoginPage';
 import ReviewTaskPage from './pages/ReviewTaskPage';
 import AnalyticsDashboard from './pages/AnalyticsDashboard';
@@ -176,6 +177,8 @@ const AppLayout = ({ user, onLogout, onUpdateUser }) => {
           </Routes>
         </main>
       </div>
+      {/* Mobile bottom navigation — visible only on ≤768px */}
+      <MobileBottomNav onToggleSidebar={() => setSidebarOpen(o => !o)} />
     </div>
   );
 };
