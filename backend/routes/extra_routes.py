@@ -4,7 +4,7 @@ import os
 import uuid
 from flask import Blueprint, jsonify, request, current_app
 from sqlalchemy import text
-from extensions import db
+from app.extensions import db
 from models.db_queries import get_pending_tasks, get_completed_tasks, save_priority_score, save_priority_scores_batch
 from services.priority_engine import rank_tasks, score_task
 
