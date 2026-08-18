@@ -29,8 +29,9 @@ jobs:
         run: |
           python -m venv antenv
           source antenv/bin/activate
+          cp scholar_track_priority/requirements.txt backend/
           cd backend
-          pip install -r scholar_track_priority/requirements.txt
+          pip install -r requirements.txt
 
       # ⚛️ NEW: Set up Node.js environment for React
       - name: Set up Node.js
