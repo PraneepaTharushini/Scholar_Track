@@ -1,0 +1,7 @@
+Database Systems Course
+Start Date: 2026-10-01
+
+Assignments:
+- Assignment 1: Introduction to SQL (Due: 5 days after start)
+- Assignment 2: Database Schema (Due: 10 days after start)
+- Assignment 3: Relational Algebra (Due: 15 days after start)

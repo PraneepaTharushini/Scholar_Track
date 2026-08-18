@@ -250,7 +250,7 @@
   font-size: 12px;
 }
 
-/* ── Responsive ─────────────────────────────────────────────── */
+/* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 1100px) {
   .two-col { grid-template-columns: 1fr; }
   .summary-bar { grid-template-columns: repeat(2, 1fr); }
