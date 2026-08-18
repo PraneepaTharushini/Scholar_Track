@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Notifications.css';
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = '/api';
 
 export default function Notifications() {
   const navigate = useNavigate();
@@ -12,21 +12,25 @@ export default function Notifications() {
   const [upcoming, setUpcoming] = useState([]);
 
   useEffect(() => {
+    const token = localStorage.getItem('scholar_track_token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const fetchNotifs = async () => {
       try {
-        const res = await fetch(`${API_BASE}/notifications`);
+        const res = await fetch(`${API_BASE}/notifications`, { headers });
         setItems(await res.json());
       } catch (e) { console.error(e); }
     };
     const fetchSettings = async () => {
       try {
-        const res = await fetch(`${API_BASE}/reminders/preferences`);
+        const res = await fetch(`${API_BASE}/reminders/preferences`, { headers });
         setSettingsList(await res.json());
       } catch (e) { console.error(e); }
     };
     const fetchDeadlines = async () => {
       try {
-        const res = await fetch(`${API_BASE}/reminders/deadlines`);
+        const res = await fetch(`${API_BASE}/reminders/deadlines`, { headers });
         setUpcoming(await res.json());
       } catch (e) { console.error(e); }
     };
@@ -50,30 +54,42 @@ export default function Notifications() {
 
   const dismiss = async (id) => {
     try {
-      await fetch(`${API_BASE}/notifications/${id}`, { method: 'DELETE' });
+      const token = localStorage.getItem('scholar_track_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      await fetch(`${API_BASE}/notifications/${id}`, { method: 'DELETE', headers });
       setItems(prev => prev.filter(n => n.id !== id));
     } catch (e) { console.error(e); }
   };
 
   const markAsRead = async (id) => {
     try {
-      await fetch(`${API_BASE}/notifications/${id}/read`, { method: 'PATCH' });
+      const token = localStorage.getItem('scholar_track_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      await fetch(`${API_BASE}/notifications/${id}/read`, { method: 'PATCH', headers });
       setItems(prev => prev.map(n => n.id === id ? { ...n, is_unread: false } : n));
     } catch (e) { console.error(e); }
   };
 
   const markAll = async () => {
     try {
-      await fetch(`${API_BASE}/notifications/mark-all-read`, { method: 'PATCH' });
+      const token = localStorage.getItem('scholar_track_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      await fetch(`${API_BASE}/notifications/mark-all-read`, { method: 'PATCH', headers });
       setItems(prev => prev.map(n => ({ ...n, is_unread: false })));
     } catch (e) { console.error(e); }
   };
 
   const toggleSetting = async (pref_key, current_status) => {
     try {
+      const token = localStorage.getItem('scholar_track_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       await fetch(`${API_BASE}/reminders/preferences/${pref_key}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ is_enabled: !current_status })
       });
       setSettingsList(prev => prev.map(s => s.pref_key === pref_key ? { ...s, is_enabled: !current_status } : s));
@@ -188,6 +204,37 @@ export default function Notifications() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* AI Study schedule suggestion */}
+          <div className="schedule-card">
+            <h4>🤖 AI Study Schedule for Today</h4>
+            <p>Based on your deadlines and past patterns, here's your optimised study plan:</p>
+            <div className="schedule-times">
+              <div className="schedule-time-row"><span>🕓 4:00 – 6:00 PM</span><span style={{ fontWeight: 600 }}>Database Project</span></div>
+              <div className="schedule-time-row"><span>🕖 6:30 – 8:00 PM</span><span style={{ fontWeight: 600 }}>Algebra Review</span></div>
+              <div className="schedule-time-row"><span>🕗 8:30 – 9:30 PM</span><span style={{ fontWeight: 600 }}>Statistics Read</span></div>
+            </div>
+          </div>
+
+          {/* Notification channel status */}
+          <div className="panel" style={{ marginTop: 20 }}>
+            <div className="panel-header">
+              <div className="panel-title">📡 Delivery Channels</div>
+            </div>
+            {[
+              { icon: '📧', label: 'Gmail SMTP', status: 'Connected', color: '#10b981' },
+              { icon: '🌐', label: 'Browser Push', status: 'Enabled', color: '#10b981' },
+              { icon: '📱', label: 'PWA Mobile', status: 'Ready', color: '#10b981' },
+            ].map(c => (
+              <div className="setting-row" key={c.label}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 18 }}>{c.icon}</span>
+                  <div className="setting-name">{c.label}</div>
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: c.color }}>● {c.status}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>

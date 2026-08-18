@@ -235,6 +235,74 @@
   .onboarding-tabs { grid-template-columns: 1fr; gap: 4px; }
 }
 
+/* ── Timer Modal — mobile friendly ── */
+@media (max-width: 600px) {
+  .timer-modal-content {
+    max-width: 95vw;
+    padding: 22px 18px;
+    border-radius: 18px;
+  }
+  .timer-display-wrap {
+    width: 160px;
+    height: 160px;
+    margin-bottom: 20px;
+  }
+  .timer-time { font-size: 34px; }
+  .timer-task-title { font-size: 15px; }
+  .timer-btn {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 400px) {
+  .timer-modal-content {
+    padding: 18px 14px;
+  }
+  .timer-display-wrap {
+    width: 140px;
+    height: 140px;
+  }
+  .timer-time { font-size: 28px; }
+  .timer-controls { gap: 8px; }
+  .timer-btn { padding: 7px 10px; font-size: 11px; }
+}
+
+/* ── Onboarding modal — mobile friendly ── */
+@media (max-width: 600px) {
+  .onboarding-overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+  .onboarding-card {
+    border-radius: 20px 20px 0 0;
+    padding: 24px 16px;
+    margin: 0;
+    max-width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+}
+
+/* ── Task row on mobile — stack start btn below ── */
+@media (max-width: 480px) {
+  .dash-task-row {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .dash-task-right {
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .dash-start-work-btn {
+    font-size: 12px;
+    padding: 8px 14px;
+  }
+}
+
 /* ── Formula Status Panel ───────────────────────────────── */
 .dash-formula-panel {
   background: var(--bg-card, #fff);
@@ -962,6 +1030,73 @@
 
 .simulator-slider::-moz-range-thumb:hover {
   transform: scale(1.2);
+}
+
+/* ── Toast Notifications ───────────────────────────────────── */
+.toast-notification {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: var(--bg-card, #ffffff);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--border, #e5e7eb);
+  z-index: 1000;
+  animation: slideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  max-width: 400px;
+}
+
+.toast-success {
+  border-left: 4px solid #10b981;
+}
+
+.toast-warning {
+  border-left: 4px solid #f59e0b;
+}
+
+.toast-error {
+  border-left: 4px solid #ef4444;
+}
+
+.toast-icon {
+  font-size: 20px;
+}
+
+.toast-message {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary, #1e1b4b);
+  line-height: 1.4;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: var(--text-muted, #9ca3af);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+  margin-left: auto;
+  transition: color 0.2s;
+}
+
+.toast-close:hover {
+  color: var(--text-primary, #1e1b4b);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "../context/ThemeContext";
+import { api } from "../services/api";
 import "../global.css";
 
 const Field = ({ label, name, type = "text", form, setForm }) => (
@@ -317,18 +318,161 @@ function SettingsPage() {
   );
 }
 
+// ─── PRIVILEGES PAGE ─────────────────────────────────────────────────────────
+function PrivilegesPage({ currentUser }) {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        const res = await api.getUsers();
+        setUsers(res.users || []);
+      } catch (err) {
+        setError(err.message || "Failed to load users list.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  const handleTogglePrivilege = async (targetUser) => {
+    const targetId = targetUser.id;
+    const targetRole = (targetUser.role || "").toLowerCase();
+    const currentIsPrivileged = targetRole === "privileged" || targetRole === "admin";
+    const newPrivilege = !currentIsPrivileged;
+
+    try {
+      setError("");
+      const res = await api.updateUserPrivilege(targetId, newPrivilege);
+      
+      // Update local state
+      setUsers((prev) =>
+        prev.map((u) => (u.id === targetId ? { ...u, role: res.user.role } : u))
+      );
+    } catch (err) {
+      setError(err.message || "Failed to update user privilege.");
+    }
+  };
+
+  const filteredUsers = users.filter((u) =>
+    (u.name || "").toLowerCase().includes(search.toLowerCase()) ||
+    (u.email || "").toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="settings-page" style={{ padding: '24px' }}>
+      <div className="card">
+        <h3 className="card-title">🛡️ Manage Privileges</h3>
+        <p className="field-hint" style={{ marginBottom: '16px' }}>
+          Grant or revoke privilege access to user accounts. Privileged users can view the Analytics page and manage other users' privileges.
+        </p>
+
+        {error && (
+          <div className="login-error" role="alert" style={{ marginBottom: '16px' }}>
+            <span>⚠️ {error}</span>
+          </div>
+        )}
+
+        <div className="field" style={{ marginBottom: '20px' }}>
+          <input
+            className="field-input"
+            type="text"
+            placeholder="Search users by name or email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: '100%', maxWidth: '400px' }}
+          />
+        </div>
+
+        {loading ? (
+          <div style={{ color: 'var(--text-muted)', padding: '20px 0' }}>Loading users list...</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '500px' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+                  <th style={{ padding: '12px 8px', fontWeight: 600 }}>Name</th>
+                  <th style={{ padding: '12px 8px', fontWeight: 600 }}>Email</th>
+                  <th style={{ padding: '12px 8px', fontWeight: 600 }}>Role</th>
+                  <th style={{ padding: '12px 8px', fontWeight: 600 }}>Privilege Access</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map((u) => {
+                  const isSelf = u.id === currentUser?.id;
+                  const targetRole = (u.role || "").toLowerCase();
+                  const isPrivileged = targetRole === "privileged" || targetRole === "admin";
+                  const isAdmin = targetRole === "admin";
+                  
+                  return (
+                    <tr key={u.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '12px 8px' }}>
+                        {u.name} {isSelf && <span style={{ fontSize: '11px', color: 'var(--primary)', fontStyle: 'italic' }}>(You)</span>}
+                      </td>
+                      <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>{u.email}</td>
+                      <td style={{ padding: '12px 8px' }}>
+                        <span style={{
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          backgroundColor: isAdmin ? 'rgba(239, 68, 68, 0.15)' : targetRole === 'privileged' ? 'rgba(79, 70, 229, 0.15)' : 'rgba(107, 114, 128, 0.15)',
+                          color: isAdmin ? 'rgb(239, 68, 68)' : targetRole === 'privileged' ? 'var(--primary)' : 'var(--text-secondary)'
+                        }}>
+                          {u.role.toUpperCase()}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 8px' }}>
+                        <button
+                          className={isPrivileged ? "btn-primary" : "btn-outline"}
+                          disabled={isSelf || isAdmin}
+                          onClick={() => handleTogglePrivilege(u)}
+                          style={{
+                            padding: '4px 10px',
+                            fontSize: '12px',
+                            opacity: (isSelf || isAdmin) ? 0.5 : 1,
+                            cursor: (isSelf || isAdmin) ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          {isPrivileged ? "Revoke Privilege" : "Grant Privilege"}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {filteredUsers.length === 0 && (
+              <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '30px' }}>No users found matching "{search}"</div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN EXPORT ─────────────────────────────────────────────────────────────
 export default function ProfileSettingsPage({ user, onUpdateUser }) {
   const [activePage, setActivePage] = useState("profile");
+  const userRole = (user?.role || 'student').toLowerCase();
+  const isPrivilegedUser = userRole === 'privileged' || userRole === 'admin';
+
+  const tabs = [["profile", "My Profile"], ["settings", "Settings"]];
+  if (isPrivilegedUser) {
+    tabs.push(["privileges", "Manage Privileges"]);
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Sub-nav tabs */}
-      <div style={{
-        display: 'flex', gap: 4, padding: '16px 32px 0',
-        borderBottom: '1px solid var(--border)', background: 'var(--bg-white)'
-      }}>
-        {[["profile", "My Profile"], ["settings", "Settings"]].map(([id, label]) => (
+      <div className="profile-settings-nav">
+        {tabs.map(([id, label]) => (
           <button
             key={id}
             onClick={() => setActivePage(id)}
@@ -353,6 +497,7 @@ export default function ProfileSettingsPage({ user, onUpdateUser }) {
       <div style={{ overflow: 'auto', flex: 1 }}>
         {activePage === "profile"  && <ProfilePage user={user} onUpdateUser={onUpdateUser} />}
         {activePage === "settings" && <SettingsPage />}
+        {activePage === "privileges" && isPrivilegedUser && <PrivilegesPage currentUser={user} />}
       </div>
     </div>
   );
