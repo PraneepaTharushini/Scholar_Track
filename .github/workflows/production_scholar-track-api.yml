@@ -29,7 +29,6 @@ jobs:
         run: |
           python -m venv antenv
           source antenv/bin/activate
-          cp scholar_track_priority/requirements.txt backend/
           cd backend
           pip install -r requirements.txt
 
