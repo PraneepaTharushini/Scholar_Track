@@ -1,53 +1,113 @@
+from datetime import datetime, date
 from app.analytics import analytics_bp
 from app.auth.routes import token_required
+from models.db_queries import get_pending_tasks, get_completed_tasks
+from services.priority_engine import rank_tasks
 
 
 @analytics_bp.get("/summary")
 @token_required
 def summary(user):
+    pending = get_pending_tasks(user.id)
+    completed = get_completed_tasks(user.id)
+    
+    total = len(pending) + len(completed)
+    overdue_count = 0
+    now = date.today()
+    for t in pending:
+        d = t.get("deadline")
+        if d:
+            if isinstance(d, datetime):
+                d = d.date()
+            elif isinstance(d, str):
+                d = date.fromisoformat(d[:10])
+            if d < now:
+                overdue_count += 1
+                
     return {
-        "total": 24,
-        "completed": 14,
-        "pending": 8,
-        "overdue": 2,
+        "total": total,
+        "completed": len(completed),
+        "pending": len(pending),
+        "overdue": overdue_count
     }, 200
 
 
 @analytics_bp.get("/status")
 @token_required
 def status(user):
-    return {
-        "status": [
-            {"label": "Completed", "value": 14, "pct": 58, "color": "#22C55E"},
-            {"label": "Pending", "value": 8, "pct": 33, "color": "#F59E0B"},
-            {"label": "Overdue", "value": 2, "pct": 9, "color": "#EF4444"},
-        ],
-    }, 200
+    pending = get_pending_tasks(user.id)
+    completed = get_completed_tasks(user.id)
+    ranked = rank_tasks(pending, completed)
+
+    quadrants = {"DO FIRST": 0, "SCHEDULE": 0, "DELEGATE": 0, "ELIMINATE": 0}
+    for t in ranked:
+        q = t.get("quadrant", "ELIMINATE")
+        if q in quadrants:
+            quadrants[q] += 1
+
+    total = len(ranked) or 1
+    status_list = [
+        {"label": "Do First", "value": quadrants["DO FIRST"], "pct": round((quadrants["DO FIRST"] / total) * 100), "color": "#EF4444"},
+        {"label": "Schedule", "value": quadrants["SCHEDULE"], "pct": round((quadrants["SCHEDULE"] / total) * 100), "color": "#4F46E5"},
+        {"label": "Delegate", "value": quadrants["DELEGATE"], "pct": round((quadrants["DELEGATE"] / total) * 100), "color": "#F59E0B"},
+        {"label": "Eliminate", "value": quadrants["ELIMINATE"], "pct": round((quadrants["ELIMINATE"] / total) * 100), "color": "#10B981"}
+    ]
+    return {"status": status_list}, 200
 
 
 @analytics_bp.get("/categories")
 @token_required
 def categories(user):
-    return {
-        "categories": [
-            {"label": "Assignments", "count": 9},
-            {"label": "Exams", "count": 5},
-            {"label": "Projects", "count": 6},
-            {"label": "Reading", "count": 4},
-        ],
-    }, 200
+    pending = get_pending_tasks(user.id)
+    completed = get_completed_tasks(user.id)
+    
+    cat_counts = {}
+    for t in pending + completed:
+        cat = t.get("category") or "Other"
+        cat_counts[cat] = cat_counts.get(cat, 0) + 1
+
+    cat_list = [{"label": k, "count": v} for k, v in cat_counts.items()]
+    return {"categories": cat_list}, 200
 
 
 @analytics_bp.get("/insights")
 @token_required
 def insights(user):
-    return {
-        "insights": [
-            "Most pending work is grouped around assignments and projects.",
-            "Two tasks are overdue and should be reviewed first.",
-            "Completion progress is steady; keep upcoming deadlines visible in the calendar.",
-        ],
-    }, 200
+    completed = get_completed_tasks(user.id)
+    
+    if not completed:
+        return {
+            "insights": [
+                "Add and complete more tasks to unlock personalized habit analysis!",
+                "Tasks with early deadlines should be placed in your DO FIRST quadrant.",
+                "Keeping your workload distributed prevents study burnout."
+            ]
+        }, 200
+
+    on_time = 0
+    for t in completed:
+        deadline = t.get("deadline")
+        comp = t.get("completed_at")
+        if deadline and comp:
+            if isinstance(deadline, str):
+                deadline = date.fromisoformat(deadline[:10])
+            elif isinstance(deadline, datetime):
+                deadline = deadline.date()
+            if isinstance(comp, str):
+                comp = date.fromisoformat(comp[:10])
+            elif isinstance(comp, datetime):
+                comp = comp.date()
+            if comp <= deadline:
+                on_time += 1
+
+    on_time_pct = round((on_time / len(completed)) * 100)
+    
+    insights_list = [
+        f"You submit {on_time_pct}% of your tasks on or before the deadline date.",
+        "Your most active task category is Exam preparation." if len(completed) > 2 else "Keep completing tasks on time to raise your student behavior score!",
+        "Tip: Break down projects into smaller assignments to balance your workload."
+    ]
+    return {"insights": insights_list}, 200
 
 
 @analytics_bp.get("/timeline")
@@ -66,89 +126,35 @@ def timeline(user):
 @analytics_bp.get("/recommendations")
 @token_required
 def recommendations(user):
-    """
-    Returns a ranked task list with priority scores and smart recommendations.
-    Currently returns structured mock data matching the Dashboard.jsx contract.
-    Will be replaced with live data once the Task model is integrated.
-    """
-    ranked_tasks = [
-        {
-            "task_id": 1,
-            "title": "Database Assignment 02",
-            "subject": "DBMS",
-            "days_left": -1,
-            "status": "pending",
-            "quadrant": "DO FIRST",
-            "focus_sessions": 2,
-            "priority_score": 9.4,
-        },
-        {
-            "task_id": 2,
-            "title": "AI Group Presentation",
-            "subject": "AI",
-            "days_left": 3,
-            "status": "pending",
-            "quadrant": "DO FIRST",
-            "focus_sessions": 1,
-            "priority_score": 8.1,
-        },
-        {
-            "task_id": 3,
-            "title": "Algebra Midterm Exam",
-            "subject": "MAT",
-            "days_left": 7,
-            "status": "pending",
-            "quadrant": "SCHEDULE",
-            "focus_sessions": 0,
-            "priority_score": 7.3,
-        },
-        {
-            "task_id": 4,
-            "title": "Physics Lab Report",
-            "subject": "PHY",
-            "days_left": 5,
-            "status": "pending",
-            "quadrant": "SCHEDULE",
-            "focus_sessions": 1,
-            "priority_score": 6.8,
-        },
-        {
-            "task_id": 5,
-            "title": "SE Quiz",
-            "subject": "SE",
-            "days_left": 14,
-            "status": "pending",
-            "quadrant": "ELIMINATE",
-            "focus_sessions": 0,
-            "priority_score": 3.2,
-        },
-    ]
+    pending = get_pending_tasks(user.id)
+    completed = get_completed_tasks(user.id)
+    ranked_tasks = rank_tasks(pending, completed)
 
-    overdue = [t for t in ranked_tasks if t["days_left"] < 0]
-    do_first = [t for t in ranked_tasks if t["quadrant"] == "DO FIRST"]
+    overdue = [t for t in ranked_tasks if t.get("focus_sessions", 0) < 0 or t.get("days_left", 0) < 0]
+    do_first = [t for t in ranked_tasks if t.get("quadrant") == "DO FIRST"]
 
     top_rec = (
         f"Submit or catch up on \"{overdue[0]['title']}\" immediately — "
-        f"it is {abs(overdue[0]['days_left'])} day(s) overdue."
+        f"it is {abs(overdue[0].get('days_left', 0))} day(s) overdue."
         if overdue else
         f"Start working on \"{do_first[0]['title']}\" today — "
-        f"due in {do_first[0]['days_left']} day(s)."
+        f"due in {do_first[0].get('days_left', 0)} day(s)."
         if do_first else
         "No urgent tasks right now. Review upcoming tasks and plan ahead."
     )
 
     return {
         "summary": {
-            "total": 24,
-            "completed": 14,
-            "pending": 8,
-            "overdue": 2,
+            "total": len(pending) + len(completed),
+            "completed": len(completed),
+            "pending": len(pending),
+            "overdue": len(overdue),
         },
         "ranked_tasks": ranked_tasks,
         "do_first": do_first,
-        "schedule": [t for t in ranked_tasks if t["quadrant"] == "SCHEDULE"],
-        "delegate": [t for t in ranked_tasks if t["quadrant"] == "DELEGATE"],
-        "eliminate": [t for t in ranked_tasks if t["quadrant"] == "ELIMINATE"],
+        "schedule": [t for t in ranked_tasks if t.get("quadrant") == "SCHEDULE"],
+        "delegate": [t for t in ranked_tasks if t.get("quadrant") == "DELEGATE"],
+        "eliminate": [t for t in ranked_tasks if t.get("quadrant") == "ELIMINATE"],
         "overdue_alerts": overdue,
         "behaviour_score": None,
         "behaviour_label": "not enough data yet",
@@ -164,31 +170,88 @@ def recommendations(user):
 @analytics_bp.get("/all")
 @token_required
 def all_analytics(user):
-    """
-    Aggregated analytics endpoint — returns summary, status, categories and
-    insights in a single request so the frontend getAnalyticsAll() call works.
-    """
+    pending = get_pending_tasks(user.id)
+    completed = get_completed_tasks(user.id)
+
+    # 1. Summary
+    total = len(pending) + len(completed)
+    overdue_count = 0
+    now = date.today()
+    for t in pending:
+        d = t.get("deadline")
+        if d:
+            if isinstance(d, datetime):
+                d = d.date()
+            elif isinstance(d, str):
+                d = date.fromisoformat(d[:10])
+            if d < now:
+                overdue_count += 1
+                
+    summary_data = {
+        "total": total,
+        "completed": len(completed),
+        "pending": len(pending),
+        "overdue": overdue_count
+    }
+
+    # 2. Status
+    ranked = rank_tasks(pending, completed)
+    quadrants = {"DO FIRST": 0, "SCHEDULE": 0, "DELEGATE": 0, "ELIMINATE": 0}
+    for t in ranked:
+        q = t.get("quadrant", "ELIMINATE")
+        if q in quadrants:
+            quadrants[q] += 1
+
+    total_ranked = len(ranked) or 1
+    status_list = [
+        {"label": "Do First", "value": quadrants["DO FIRST"], "pct": round((quadrants["DO FIRST"] / total_ranked) * 100), "color": "#EF4444"},
+        {"label": "Schedule", "value": quadrants["SCHEDULE"], "pct": round((quadrants["SCHEDULE"] / total_ranked) * 100), "color": "#4F46E5"},
+        {"label": "Delegate", "value": quadrants["DELEGATE"], "pct": round((quadrants["DELEGATE"] / total_ranked) * 100), "color": "#F59E0B"},
+        {"label": "Eliminate", "value": quadrants["ELIMINATE"], "pct": round((quadrants["ELIMINATE"] / total_ranked) * 100), "color": "#10B981"}
+    ]
+
+    # 3. Categories
+    cat_counts = {}
+    for t in pending + completed:
+        cat = t.get("category") or "Other"
+        cat_counts[cat] = cat_counts.get(cat, 0) + 1
+    cat_list = [{"label": k, "count": v} for k, v in cat_counts.items()]
+
+    # 4. Insights
+    if not completed:
+        insights_data = [
+            "Add and complete more tasks to unlock personalized habit analysis!",
+            "Tasks with early deadlines should be placed in your DO FIRST quadrant.",
+            "Keeping your workload distributed prevents study burnout."
+        ]
+    else:
+        on_time = 0
+        for t in completed:
+            deadline = t.get("deadline")
+            comp = t.get("completed_at")
+            if deadline and comp:
+                if isinstance(deadline, str):
+                    deadline = date.fromisoformat(deadline[:10])
+                elif isinstance(deadline, datetime):
+                    deadline = deadline.date()
+                if isinstance(comp, str):
+                    comp = date.fromisoformat(comp[:10])
+                elif isinstance(comp, datetime):
+                    comp = comp.date()
+                if comp <= deadline:
+                    on_time += 1
+
+        on_time_pct = round((on_time / len(completed)) * 100)
+        
+        insights_data = [
+            f"You submit {on_time_pct}% of your tasks on or before the deadline date.",
+            "Your most active task category is Exam preparation." if len(completed) > 2 else "Keep completing tasks on time to raise your student behavior score!",
+            "Tip: Break down projects into smaller assignments to balance your workload."
+        ]
+
     return {
-        "summary": {
-            "total":     24,
-            "completed": 14,
-            "pending":   8,
-            "overdue":   2,
-        },
-        "status": [
-            {"label": "Completed", "value": 14, "pct": 58, "color": "#22C55E"},
-            {"label": "Pending",   "value": 8,  "pct": 33, "color": "#F59E0B"},
-            {"label": "Overdue",   "value": 2,  "pct": 9,  "color": "#EF4444"},
-        ],
-        "categories": [
-            {"label": "Assignments", "count": 9},
-            {"label": "Exams",       "count": 5},
-            {"label": "Projects",    "count": 6},
-            {"label": "Reading",     "count": 4},
-        ],
-        "insights": [
-            "Most pending work is grouped around assignments and projects.",
-            "Two tasks are overdue and should be reviewed first.",
-            "Completion progress is steady; keep upcoming deadlines visible in the calendar.",
-        ],
+        "summary": summary_data,
+        "status": status_list,
+        "categories": cat_list,
+        "insights": insights_data
     }, 200
