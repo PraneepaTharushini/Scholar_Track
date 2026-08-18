@@ -1,0 +1,295 @@
+/* ── Notifications Page ─────────────────────────────────────── */
+.summary-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.sum-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--border);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.sum-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.sum-icon.red    { background: var(--danger-light); }
+.sum-icon.amber  { background: var(--warning-light); }
+.sum-icon.indigo { background: var(--primary-light); }
+.sum-icon.green  { background: var(--success-light); }
+
+.sum-num   { font-size: 24px; font-weight: 800; color: var(--text-primary); line-height: 1; }
+.sum-label { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+.two-col { display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+
+/* ── Filter bar ──────────────────────────────────────────────── */
+.filter-group {
+  display: flex;
+  gap: 6px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.filter-pill {
+  padding: 5px 12px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+
+.filter-pill.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.filter-pill:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
+
+.mark-all {
+  font-size: 12px;
+  color: var(--primary);
+  cursor: pointer;
+  font-weight: 500;
+  background: none;
+  border: none;
+  font-family: inherit;
+}
+.mark-all:hover { text-decoration: underline; }
+
+/* ── Notification list ───────────────────────────────────────── */
+.notif-list {
+  padding: 8px 0;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.notif-list::-webkit-scrollbar { width: 4px; }
+.notif-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.notif-item {
+  display: flex;
+  gap: 14px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .15s;
+  position: relative;
+}
+
+.notif-item:hover   { background: var(--bg-hover); }
+.notif-item.unread  { background: var(--primary-light); }
+
+.unread-dot {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.notif-ico {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.notif-ico.urgent   { background: var(--danger-light); }
+.notif-ico.reminder { background: var(--warning-light); }
+.notif-ico.success  { background: var(--success-light); }
+.notif-ico.ai       { background: var(--primary-light); }
+.notif-ico.info     { background: var(--primary-light); }
+
+.notif-body    { flex: 1; min-width: 0; }
+.notif-top     { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.notif-ttl     { font-size: 13.5px; font-weight: 600; color: var(--text-primary); flex: 1; }
+.notif-time    { font-size: 11px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+.notif-msg     { font-size: 12.5px; color: var(--text-secondary); margin-top: 3px; line-height: 1.5; }
+.notif-tags    { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+
+.tag           { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; }
+.tag.urgent    { background: var(--danger-light);  color: var(--danger); }
+.tag.reminder  { background: var(--warning-light); color: var(--warning); }
+.tag.success   { background: var(--success-light); color: var(--success); }
+.tag.ai        { background: var(--primary-light); color: var(--primary); }
+.tag.info      { background: var(--primary-light); color: var(--primary); }
+
+.course-tag    { font-size: 11px; color: var(--text-muted); margin-left: 4px; padding-top: 2px; }
+.notif-action  { display: flex; gap: 6px; margin-top: 8px; }
+
+/* ── Small buttons ───────────────────────────────────────────── */
+.btn-sm {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+}
+
+.btn-sm.primary        { background: var(--primary); color: #fff; }
+.btn-sm.primary:hover  { opacity: 0.88; }
+.btn-sm.ghost          { background: var(--bg-hover); color: var(--text-secondary); }
+.btn-sm.ghost:hover    { background: var(--border); }
+
+/* ── Notification settings ───────────────────────────────────── */
+.settings-list { padding: 8px 0; }
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.setting-row:last-child { border-bottom: none; }
+
+.setting-info  { flex: 1; }
+.setting-name  { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.setting-desc  { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+
+.toggle {
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  background: var(--border);
+  cursor: pointer;
+  position: relative;
+  transition: background .25s;
+  flex-shrink: 0;
+  border: none;
+  outline: none;
+}
+
+.toggle.on { background: var(--primary); }
+
+.toggle::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: left .25s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+
+.toggle.on::after { left: 23px; }
+
+/* ── Upcoming deadlines ──────────────────────────────────────── */
+.deadline-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.deadline-item:last-child { border-bottom: none; }
+
+.deadline-bar   { width: 4px; height: 36px; border-radius: 2px; flex-shrink: 0; }
+.deadline-info  { flex: 1; }
+.deadline-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.deadline-sub   { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+.deadline-time  { font-size: 12px; font-weight: 700; }
+
+.empty { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px; }
+
+/* ── AI Schedule section ── */
+.schedule-card {
+  background: linear-gradient(135deg, var(--primary) 0%, #8b5cf6 100%);
+  border-radius: 12px;
+  padding: 20px;
+  color: #fff;
+  margin-top: 20px;
+}
+.schedule-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.schedule-card p { font-size: 12px; opacity: .85; line-height: 1.6; }
+.schedule-times { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.schedule-time-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, .15);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+/* ── Responsive ─────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .two-col { grid-template-columns: 1fr; }
+  .summary-bar { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  /* Let notification list scroll naturally on mobile (no fixed height cap) */
+  .notif-list {
+    max-height: none;
+  }
+
+  /* Larger touch targets for action buttons */
+  .btn-sm {
+    padding: 7px 14px;
+    font-size: 13px;
+    min-height: 36px;
+  }
+
+  /* Filter group — wrap pills */
+  .filter-group {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 600px) {
+  .summary-bar { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .notif-item  { padding: 12px 16px; gap: 10px; }
+  .filter-group { padding: 10px 14px; }
+
+  /* Notification action buttons stack on very small screens */
+  .notif-action {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}
+
+@media (max-width: 420px) {
+  .summary-bar { grid-template-columns: 1fr 1fr; }
+  .sum-card    { padding: 14px; }
+  .sum-num     { font-size: 20px; }
+  .sum-icon    { width: 38px; height: 38px; font-size: 17px; }
+}
