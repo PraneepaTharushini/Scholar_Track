@@ -40,22 +40,24 @@ priority_bp = Blueprint("priority", __name__)
 def get_current_student_id() -> int | None:
     """
     Extract student_id from the request.
-
-    This is a placeholder.  Replace the body with however your team
-    handles authentication (JWT decode, Flask-Login current_user, etc.)
-
-    Example with JWT (Flask-JWT-Extended):
-        from flask_jwt_extended import get_jwt_identity
-        return get_jwt_identity()
+    Handles JWT decoding as well as plain numeric ID fallbacks.
     """
-    # Temporary compatibility: accept student_id from multiple common sources.
     sid = request.headers.get("X-Student-ID")
     if not sid:
         sid = request.args.get("student_id")
     if not sid:
         auth_header = request.headers.get("Authorization", "")
         if auth_header.lower().startswith("bearer "):
-            sid = auth_header.split(None, 1)[1].strip()
+            token = auth_header.split(None, 1)[1].strip()
+            # Try to verify as JWT first
+            from flask import current_app
+            from app.utils.security import verify_auth_token
+            uid = verify_auth_token(current_app, token)
+            if uid is not None:
+                return uid
+            # Fallback for plain digits
+            if token.isdigit():
+                return int(token)
     if sid and sid.isdigit():
         return int(sid)
     return None

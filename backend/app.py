@@ -1,5 +1,20 @@
 import os
 
+# Helper to load local .env files without external dependencies
+def load_env_file():
+    backend_dir = os.path.dirname(os.path.abspath(__file__))
+    env_path = os.path.join(backend_dir, ".env")
+    if os.path.exists(env_path):
+        print("Loading environment from:", env_path)
+        with open(env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    os.environ[k.strip()] = v.strip().strip('"').strip("'")
+
+load_env_file()
+
 from flask import Flask, jsonify
 from flask_cors import CORS
 

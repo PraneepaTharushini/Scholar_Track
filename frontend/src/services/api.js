@@ -29,13 +29,19 @@ async function request(method, path, body = null, auth = true) {
 
 export const api = {
   // ── Auth ─────────────────────────────────────────────────
-  register: (name, email, password) =>
-    request('POST', '/auth/register', { name, email, password }, false),
+  register: (name, email, password, confirmPassword) =>
+    request('POST', '/auth/register', { name, email, password, confirm_password: confirmPassword }, false),
 
   login: (email, password) =>
     request('POST', '/auth/login', { email, password }, false),
 
   getMe: () => request('GET', '/auth/me'),
+
+  forgotPassword: (email) =>
+    request('POST', '/auth/forgot-password', { email }, false),
+
+  resetPassword: (email, code, password, confirm_password) =>
+    request('POST', '/auth/reset-password', { email, code, password, confirm_password }, false),
 
   // ── Tasks ────────────────────────────────────────────────
   getTasks: () => request('GET', '/tasks'),
@@ -70,4 +76,9 @@ export const api = {
   setToken:   (token) => localStorage.setItem('scholar_track_token', token),
   clearToken: ()      => localStorage.removeItem('scholar_track_token'),
   hasToken:   ()      => !!localStorage.getItem('scholar_track_token'),
+
+  // ── User management ──────────────────────────────────────
+  getUsers: () => request('GET', '/auth/users'),
+  updateUserPrivilege: (userId, isPrivileged) =>
+    request('PUT', `/auth/users/${userId}/privilege`, { privileged: isPrivileged }),
 };

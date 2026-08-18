@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import MobileBottomNav from './components/MobileBottomNav';
 import LoginPage from './components/LoginPage';
 import ReviewTaskPage from './pages/ReviewTaskPage';
 import AnalyticsDashboard from './pages/AnalyticsDashboard';
@@ -15,19 +16,20 @@ import AcademicCalendar from './components/AcademicCalendar';
 import UploadPage from './pages/UploadPage';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { TaskProvider } from './context/TaskContext';
+import NoInternetBanner from './components/NoInternetBanner';
 import './App.css';
 
 /* ── Page titles mapped to routes ─────────────────────────── */
 const PAGE_TITLES = {
-  '/':              'Dashboard',
-  '/upload':        'Upload Documents',
-  '/review':        'Review Tasks',
-  '/tasks':         'Tasks',
-  '/calendar':      'Calendar',
-  '/analytics':     'Analytics',
+  '/': 'Dashboard',
+  '/upload': 'Upload Documents',
+  '/review': 'Review Tasks',
+  '/tasks': 'Tasks',
+  '/calendar': 'Calendar',
+  '/analytics': 'Analytics',
   '/notifications': 'Notifications',
-  '/system':        'System Info',
-  '/settings':      'Settings',
+  '/system': 'System Info',
+  '/settings': 'Settings',
 };
 
 /* ── Task page with detail view ──────────────────────────── */
@@ -72,7 +74,7 @@ function TasksPage() {
       });
       const freshList = await api.getTasks();
       setTasks(freshList);
-      
+
       const freshSelected = freshList.find(t => t.id === updated.id) || updated;
       setSelectedTask(freshSelected);
     } catch (err) {
@@ -140,6 +142,8 @@ const AppLayout = ({ user, onLogout, onUpdateUser }) => {
   const title = PAGE_TITLES[location.pathname] || 'Scholar Track';
   const { theme, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const role = (user?.role || 'student').toLowerCase();
+  const isAdmin = role === 'admin';
 
   // Close sidebar on path changes
   useEffect(() => {
@@ -148,30 +152,33 @@ const AppLayout = ({ user, onLogout, onUpdateUser }) => {
 
   return (
     <div className="app-layout">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} role={role} />
       <div className="app-main">
-        <Header 
-          title={title} 
-          user={user} 
-          theme={theme} 
-          onToggleTheme={toggleTheme} 
-          onLogout={onLogout} 
-          onToggleSidebar={() => setSidebarOpen(o => !o)} 
+        <Header
+          title={title}
+          user={user}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          onLogout={onLogout}
+          onToggleSidebar={() => setSidebarOpen(o => !o)}
         />
         <main className="app-content">
           <Routes>
-            <Route path="/"              element={<Dashboard />} />
-            <Route path="/upload"        element={<UploadPage />} />
-            <Route path="/review"        element={<ReviewTaskPage />} />
-            <Route path="/tasks"         element={<TasksPage />} />
-            <Route path="/calendar"      element={<AcademicCalendar />} />
-            <Route path="/analytics"     element={<AnalyticsDashboard />} />
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/upload" element={!isAdmin ? <UploadPage /> : <Navigate to="/" replace />} />
+            <Route path="/review" element={!isAdmin ? <ReviewTaskPage /> : <Navigate to="/" replace />} />
+            <Route path="/tasks" element={!isAdmin ? <TasksPage /> : <Navigate to="/" replace />} />
+            <Route path="/calendar" element={!isAdmin ? <AcademicCalendar /> : <Navigate to="/" replace />} />
+            <Route path="/analytics" element={<AnalyticsDashboard />} />
             <Route path="/notifications" element={<Notifications />} />
-            <Route path="/system"        element={<SystemInfo />} />
-            <Route path="/settings"      element={<ProfilePage user={user} onUpdateUser={onUpdateUser} />} />
+            <Route path="/system" element={isAdmin ? <SystemInfo user={user} /> : <Navigate to="/" replace />} />
+            <Route path="/settings" element={<ProfilePage user={user} onUpdateUser={onUpdateUser} />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
       </div>
+      {/* Mobile bottom navigation — visible only on ≤768px */}
+      <MobileBottomNav onToggleSidebar={() => setSidebarOpen(o => !o)} />
     </div>
   );
 };
@@ -227,23 +234,34 @@ function AppInner() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-root, #0a0a0f)', color: 'var(--text-primary, #ffffff)' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 48, marginBottom: 16, display: 'inline-block', animation: 'spin 2s linear infinite' }}>⏳</div>
-          <div style={{ fontSize: 16, fontWeight: 500 }}>Initializing Scholar Track...</div>
+      <>
+        <NoInternetBanner />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-root, #0a0a0f)', color: 'var(--text-primary, #ffffff)' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 16, display: 'inline-block', animation: 'spin 2s linear infinite' }}>⏳</div>
+            <div style={{ fontSize: 16, fontWeight: 500 }}>Initializing Scholar Track...</div>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   if (!user) {
-    return <LoginPage onLogin={handleLogin} />;
+    return (
+      <>
+        <NoInternetBanner />
+        <LoginPage onLogin={handleLogin} />
+      </>
+    );
   }
 
   return (
-    <BrowserRouter>
-      <AppLayout user={user} onLogout={handleLogout} onUpdateUser={handleUpdateUser} />
-    </BrowserRouter>
+    <>
+      <NoInternetBanner />
+      <BrowserRouter>
+        <AppLayout user={user} onLogout={handleLogout} onUpdateUser={handleUpdateUser} />
+      </BrowserRouter>
+    </>
   );
 }
 

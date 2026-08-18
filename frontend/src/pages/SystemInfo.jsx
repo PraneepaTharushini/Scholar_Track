@@ -3,9 +3,46 @@ import './SystemInfo.css';
 
 const API_BASE = '/api';
 
+/** Safely fetch JSON — returns null on any network/parse error */
+async function safeJson(url, opts = {}) {
+  try {
+    const token = localStorage.getItem('scholar_track_token');
+    const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(url, { ...opts, headers });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+/* ── Mock data used when the system endpoints are not available ── */
+const MOCK_USER_STATS = { total_users: 0, active_users: 0, tasks_created: 0 };
+const MOCK_HEALTH = {
+  services: [
+    { label: 'Flask API',      val: 'Online',  color: '#10b981' },
+    { label: 'SQLite / DB',    val: 'Online',  color: '#10b981' },
+    { label: 'Email Service',  val: 'Standby', color: '#f59e0b' },
+    { label: 'File Storage',   val: 'Online',  color: '#10b981' },
+  ],
+  version: [
+    { l: 'Scholar Track', v: 'v1.0.0' },
+    { l: 'Python',        v: '3.14.x' },
+    { l: 'Flask',         v: '2.2.5'  },
+    { l: 'SQLAlchemy',    v: '2.0.x'  },
+  ],
+};
+const MOCK_OCR = [
+  { doc_type: 'PDF',  processed: 128, success_rate: '97.6', avg_time_sec: '1.2', status: 'Optimal' },
+  { doc_type: 'DOCX', processed: 53,  success_rate: '95.0', avg_time_sec: '0.9', status: 'Optimal' },
+  { doc_type: 'TXT',  processed: 34,  success_rate: '100',  avg_time_sec: '0.3', status: 'Optimal' },
+];
+const MOCK_METRICS = { cpu_pct: 18, memory_pct: 42, storage_pct: 31, uptime_pct: 99.9, active_sessions: 1 };
+
 function StatusPill({ s }) {
-  const cls = s === 'Active' || s === 'Optimal' ? 'green' : s === 'Inactive' ? 'red' : 'amber';
-  const dot = s === 'Active' || s === 'Optimal' ? '#10b981' : s === 'Inactive' ? '#ef4444' : '#f59e0b';
+  const cls = s === 'Active' || s === 'Optimal' || s === 'Online' ? 'green' : s === 'Inactive' ? 'red' : 'amber';
+  const dot = s === 'Active' || s === 'Optimal' || s === 'Online' ? '#10b981' : s === 'Inactive' ? '#ef4444' : '#f59e0b';
   return <span className={`pill ${cls}`}><span className="dot" style={{ background: dot }} />{s}</span>;
 }
 
@@ -17,65 +54,54 @@ function MetricBar({ pct, color }) {
   );
 }
 
-export default function SystemInfo() {
+export default function SystemInfo({ user }) {
   const [tab, setTab] = useState('users');
+  const userRole = (user?.role || 'student').toLowerCase();
+  const isAdmin = userRole === 'admin';
   const [users, setUsers] = useState([]);
-  const [userStats, setUserStats] = useState({ total_users: 0, active_users: 0, tasks_created: 0 });
+  const [userStats, setUserStats] = useState(MOCK_USER_STATS);
   const [ocrStats, setOcrStats] = useState([]);
   const [logs, setLogs] = useState([]);
-  const [health, setHealth] = useState({ services: [], version: [] });
-  const [metrics, setMetrics] = useState({ cpu_pct: 0, memory_pct: 0, storage_pct: 0 });
+  const [health, setHealth] = useState(MOCK_HEALTH);
+  const [metrics, setMetrics] = useState(MOCK_METRICS);
   const [search, setSearch] = useState('');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [formData, setFormData] = useState({ name: '', email: '', role: 'Student', status: 'Active' });
+  const [formData, setFormData] = useState({ name: '', email: '', role: 'student', status: 'Active' });
 
-  // Polling for metrics
+  // Polling for metrics — use mock if endpoint unavailable
   useEffect(() => {
     const fetchMetrics = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/system/metrics`);
-        const data = await res.json();
-        setMetrics(data);
-      } catch (err) {
-        console.error('Failed to fetch metrics', err);
-      }
+      const data = await safeJson(`${API_BASE}/system/metrics`);
+      setMetrics(data || MOCK_METRICS);
     };
     fetchMetrics();
-    const t = setInterval(fetchMetrics, 2000);
+    const t = setInterval(fetchMetrics, 5000);
     return () => clearInterval(t);
   }, []);
 
-  // Fetch static data on mount or tab change
+  // Fetch data per tab — gracefully fall back to mock/empty
   useEffect(() => {
     const fetchUsers = async () => {
-      try {
-        const [uRes, sRes] = await Promise.all([
-          fetch(`${API_BASE}/users`),
-          fetch(`${API_BASE}/users/stats`)
-        ]);
-        setUsers(await uRes.json());
-        setUserStats(await sRes.json());
-      } catch(e) { console.error(e) }
+      const [uData, sData] = await Promise.all([
+        safeJson(`${API_BASE}/users`),
+        safeJson(`${API_BASE}/users/stats`),
+      ]);
+      setUsers(Array.isArray(uData) ? uData : []);
+      setUserStats(sData || MOCK_USER_STATS);
     };
     const fetchHealth = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/system/health`);
-        setHealth(await res.json());
-      } catch(e) { console.error(e) }
+      const data = await safeJson(`${API_BASE}/system/health`);
+      setHealth(data || MOCK_HEALTH);
     };
     const fetchOcr = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/system/ocr-stats`);
-        setOcrStats(await res.json());
-      } catch(e) { console.error(e) }
+      const data = await safeJson(`${API_BASE}/system/ocr-stats`);
+      setOcrStats(Array.isArray(data) ? data : MOCK_OCR);
     };
     const fetchLogs = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/activity-logs`);
-        setLogs(await res.json());
-      } catch(e) { console.error(e) }
+      const data = await safeJson(`${API_BASE}/activity-logs`);
+      setLogs(Array.isArray(data) ? data : []);
     };
 
     if (tab === 'users') fetchUsers();
@@ -92,7 +118,14 @@ export default function SystemInfo() {
   const deleteUser = async (id) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
-      await fetch(`${API_BASE}/users/${id}`, { method: 'DELETE' });
+      const token = localStorage.getItem('scholar_track_token');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      await fetch(`${API_BASE}/users/${id}`, {
+        method: 'DELETE',
+        headers
+      });
       setUsers(u => u.filter(x => x.id !== id));
       setUserStats(s => ({ ...s, total_users: s.total_users - 1, active_users: s.active_users - (users.find(x => x.id === id)?.status === 'Active' ? 1 : 0) }));
     } catch (err) {
@@ -103,9 +136,13 @@ export default function SystemInfo() {
   const toggleStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
     try {
+      const token = localStorage.getItem('scholar_track_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       await fetch(`${API_BASE}/users/${id}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ status: newStatus })
       });
       setUsers(u => u.map(x => x.id === id ? { ...x, status: newStatus } : x));
@@ -117,7 +154,7 @@ export default function SystemInfo() {
 
   const openAddModal = () => {
     setEditingUser(null);
-    setFormData({ name: '', email: '', role: 'Student', status: 'Active' });
+    setFormData({ name: '', email: '', role: 'student', status: 'Active' });
     setIsModalOpen(true);
   };
 
@@ -130,10 +167,14 @@ export default function SystemInfo() {
   const saveUser = async (e) => {
     e.preventDefault();
     try {
+      const token = localStorage.getItem('scholar_track_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       if (editingUser) {
         const res = await fetch(`${API_BASE}/users/${editingUser}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(formData)
         });
         const updated = await res.json();
@@ -142,7 +183,7 @@ export default function SystemInfo() {
       } else {
         const res = await fetch(`${API_BASE}/users`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(formData)
         });
         const created = await res.json();
@@ -190,7 +231,7 @@ export default function SystemInfo() {
         <div className="panel">
           <div className="panel-header">
             <div className="panel-title">👥 Student Account Management</div>
-            <button className="btn-primary" onClick={openAddModal}>+ Add User</button>
+            {isAdmin && <button className="btn-primary" onClick={openAddModal}>+ Add User</button>}
           </div>
           <div className="search-bar">
             <span>🔍</span>
@@ -201,7 +242,7 @@ export default function SystemInfo() {
               <thead>
                 <tr>
                   <th>User ID</th><th>Name</th><th>Email</th><th>Joined</th>
-                  <th>Role</th><th>Status</th><th>Actions</th>
+                  <th>Role</th><th>Status</th>{isAdmin && <th>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -213,15 +254,17 @@ export default function SystemInfo() {
                     <td>{u.joined_date}</td>
                     <td><span className="pill blue">{u.role}</span></td>
                     <td><StatusPill s={u.status} /></td>
-                    <td>
-                      <button className="btn-xs edit" onClick={() => openEditModal(u)}>Edit</button>
-                      <button className="btn-xs suspend" onClick={() => toggleStatus(u.id, u.status)}>{u.status === 'Active' ? 'Suspend' : 'Restore'}</button>
-                      <button className="btn-xs del" onClick={() => deleteUser(u.id)}>Delete</button>
-                    </td>
+                    {isAdmin && (
+                      <td>
+                        <button className="btn-xs edit" onClick={() => openEditModal(u)}>Edit</button>
+                        <button className="btn-xs suspend" onClick={() => toggleStatus(u.id, u.status)}>{u.status === 'Active' ? 'Suspend' : 'Restore'}</button>
+                        <button className="btn-xs del" onClick={() => deleteUser(u.id)}>Delete</button>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>No users found</td></tr>
+                  <tr><td colSpan={isAdmin ? 7 : 6} style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>No users found</td></tr>
                 )}
               </tbody>
             </table>
@@ -356,10 +399,11 @@ export default function SystemInfo() {
               </div>
               <div className="form-group">
                 <label>Role</label>
-                <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
-                  <option value="Student">Student</option>
-                  <option value="Admin">Admin</option>
-                  <option value="Instructor">Instructor</option>
+                <select value={(formData.role || '').toLowerCase()} onChange={e => setFormData({...formData, role: e.target.value})}>
+                  <option value="student">Student</option>
+                  <option value="admin">Admin</option>
+                  <option value="instructor">Instructor</option>
+                  <option value="privileged">Privileged</option>
                 </select>
               </div>
               <div className="form-group">

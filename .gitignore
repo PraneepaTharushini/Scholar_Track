@@ -1,3 +1,5 @@
-node_modules/
 __pycache__/
 *.pyc
+*.pyo
+.vite/
+node_modules

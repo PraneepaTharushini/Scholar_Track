@@ -28,7 +28,7 @@ pip install -r requirements.txt
 Set `DATABASE_URL` if you are not using the default connection in `backend/app.py`, then start the API:
 
 ```bash
-python app.py
+python run.py
 ```
 
 The backend runs on port `5000` by default.
