@@ -76,6 +76,69 @@
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
+@media (max-width: 768px) {
+  /* Make tabs scrollable horizontally instead of overflowing */
+  .tabs {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    padding: 8px 14px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Tables — horizontal scroll on mobile */
+  .system-info-page {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .system-info-page table {
+    min-width: 500px;
+  }
+
+  /* Search bar full width */
+  .search-bar {
+    padding: 10px 14px;
+  }
+
+  /* Info rows */
+  .info-row {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 12px 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stat-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .stat-card {
+    padding: 14px 14px;
+    gap: 10px;
+  }
+  .stat-num { font-size: 20px; }
+  .stat-icon { font-size: 22px; }
+  .stat-lbl  { font-size: 11px; }
+
+  /* Smaller action buttons in table rows */
+  .btn-xs {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+
+  /* Log items */
+  .log-item { padding: 10px 14px; }
+}
+
 /* Modal Styles */
 .modal-overlay {
   position: fixed;
