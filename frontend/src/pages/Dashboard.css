@@ -235,6 +235,74 @@
   .onboarding-tabs { grid-template-columns: 1fr; gap: 4px; }
 }
 
+/* ── Timer Modal — mobile friendly ── */
+@media (max-width: 600px) {
+  .timer-modal-content {
+    max-width: 95vw;
+    padding: 22px 18px;
+    border-radius: 18px;
+  }
+  .timer-display-wrap {
+    width: 160px;
+    height: 160px;
+    margin-bottom: 20px;
+  }
+  .timer-time { font-size: 34px; }
+  .timer-task-title { font-size: 15px; }
+  .timer-btn {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 400px) {
+  .timer-modal-content {
+    padding: 18px 14px;
+  }
+  .timer-display-wrap {
+    width: 140px;
+    height: 140px;
+  }
+  .timer-time { font-size: 28px; }
+  .timer-controls { gap: 8px; }
+  .timer-btn { padding: 7px 10px; font-size: 11px; }
+}
+
+/* ── Onboarding modal — mobile friendly ── */
+@media (max-width: 600px) {
+  .onboarding-overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+  .onboarding-card {
+    border-radius: 20px 20px 0 0;
+    padding: 24px 16px;
+    margin: 0;
+    max-width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+}
+
+/* ── Task row on mobile — stack start btn below ── */
+@media (max-width: 480px) {
+  .dash-task-row {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .dash-task-right {
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .dash-start-work-btn {
+    font-size: 12px;
+    padding: 8px 14px;
+  }
+}
+
 /* ── Formula Status Panel ───────────────────────────────── */
 .dash-formula-panel {
   background: var(--bg-card, #fff);
